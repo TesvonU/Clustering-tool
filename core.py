@@ -51,6 +51,12 @@ def drop_lines(dataset, lower, upper):
     return dataset, columns, lines
 
 
+def sort_dataset(dataset, sort_by):
+    dataset = dataset.sort_values(by=sort_by)
+    dataset = dataset.reset_index(drop=True)
+    columns, lines = read_column_line(dataset)
+    return dataset, columns, lines
+
 output = read_file("champions.csv")
 dataset = output[0]
 column = output[1]
@@ -59,7 +65,15 @@ print_dataset(dataset)
 print_dataset(column)
 print_dataset(line)
 
-output = drop_column(dataset, column[1])
+output = sort_dataset(dataset, column[1])
+dataset = output[0]
+column = output[1]
+line = output[2]
+print_dataset(dataset)
+print_dataset(column)
+print_dataset(line)
+
+output = drop_column(dataset, column[0])
 dataset = output[0]
 output = drop_column(dataset, column[-1])
 dataset = output[0]
@@ -76,4 +90,7 @@ line = output[2]
 print_dataset(dataset)
 print_dataset(column)
 print_dataset(line)
+
+
+
 save_dataset(dataset, "small_set.csv")
