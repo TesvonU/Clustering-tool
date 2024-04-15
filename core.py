@@ -14,7 +14,7 @@ def read_file(path):
     return (dataset, columns, lines)
 
 def read_column_line(dataset):
-    columns = dataset.column
+    columns = list(dataset.columns)
     lines = len(dataset)
     return (columns, lines)
 
