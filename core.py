@@ -14,6 +14,8 @@ def read_file(path):
     columns, lines = read_column_line(dataset)
     return dataset, columns, lines
 
+def save_dataset(dataset, path):
+    dataset.to_csv(path)
 
 def read_column_line(dataset):
     columns = list(dataset.columns)
@@ -57,6 +59,8 @@ print_dataset(dataset)
 print_dataset(column)
 print_dataset(line)
 
+output = drop_column(dataset, column[1])
+dataset = output[0]
 output = drop_column(dataset, column[-1])
 dataset = output[0]
 column = output[1]
@@ -65,10 +69,11 @@ print_dataset(dataset)
 print_dataset(column)
 print_dataset(line)
 
-output = drop_lines(dataset, 20000, 50000)
+output = drop_lines(dataset, 200, 50000)
 dataset = output[0]
 column = output[1]
 line = output[2]
 print_dataset(dataset)
 print_dataset(column)
 print_dataset(line)
+save_dataset(dataset, "small_set.csv")
