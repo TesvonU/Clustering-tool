@@ -57,6 +57,12 @@ def sort_dataset(dataset, sort_by):
     columns, lines = read_column_line(dataset)
     return dataset, columns, lines
 
+
+def drop_duplicates(dataset, unique_value):
+    dataset = dataset.drop_duplicates(subset=unique_value, keep='first')
+    columns, lines = read_column_line(dataset)
+    return dataset, columns, lines
+
 output = read_file("champions.csv")
 dataset = output[0]
 column = output[1]
@@ -84,6 +90,14 @@ print_dataset(column)
 print_dataset(line)
 
 output = drop_lines(dataset, 200, 50000)
+dataset = output[0]
+column = output[1]
+line = output[2]
+print_dataset(dataset)
+print_dataset(column)
+print_dataset(line)
+
+output = drop_duplicates(dataset, "ID")
 dataset = output[0]
 column = output[1]
 line = output[2]
