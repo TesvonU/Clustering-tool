@@ -19,8 +19,10 @@ def read_file(path):
     columns, lines = read_column_line(dataset)
     return dataset, columns, lines
 
+
 def save_dataset(dataset, path):
     dataset.to_csv(path)
+
 
 def read_column_line(dataset):
     columns = list(dataset.columns)
@@ -137,8 +139,10 @@ def scale_dataset(dataset):
 
 def pca_reduction(dataset, dimensions: int):
     pca = PCA(n_components=dimensions)
-    df_pca = pd.DataFrame(pca.fit_transform(champions_scaled),
-                          columns=[i for i in range(dimensions)])
+    dataset = pd.DataFrame(pca.fit_transform(dataset), columns=[i for i in range(dimensions)])
+    columns, lines = read_column_line(dataset)
+    return dataset, columns, lines
+
 
 output = read_file("champions.csv")
 dataset = output[0]
