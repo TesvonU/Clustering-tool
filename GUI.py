@@ -34,7 +34,7 @@ class App(customtkinter.CTk):
                                                    fg_color="transparent",
                                                    text_color=("gray10", "gray90"),
                                                    hover_color=("gray70", "gray30"),
-                                                   font=("Inter",20),
+                                                   font=customtkinter.CTkFont(size=20),
                                                    command=self.dataset_button_event)
         self.dataset_button.grid(row=1, column=0, sticky="ew")
 
@@ -46,7 +46,7 @@ class App(customtkinter.CTk):
                                                       fg_color="transparent",
                                                       text_color=("gray10", "gray90"),
                                                       hover_color=("gray70", "gray30"),
-                                                      font=("Inter",20),
+                                                      font=customtkinter.CTkFont(size=20),
                                                       command=self.processing_button_event)
         self.processing_button.grid(row=2, column=0, sticky="ew")
 
@@ -58,7 +58,7 @@ class App(customtkinter.CTk):
                                                       fg_color="transparent",
                                                       text_color=("gray10", "gray90"),
                                                       hover_color=("gray70", "gray30"),
-                                                      font=("Inter", 20),
+                                                      font=customtkinter.CTkFont(size=20),
                                                       command=self.model_button_event)
         self.model_button.grid(row=3, column=0, sticky="ew")
 
@@ -72,7 +72,7 @@ class App(customtkinter.CTk):
                                                       "gray10", "gray90"),
                                                       hover_color=(
                                                       "gray70", "gray30"),
-                                                      font=("Inter", 20),
+                                                      font=customtkinter.CTkFont(size=20),
                                                       command=self.view_button_event)
         self.view_button.grid(row=4, column=0, sticky="ew")
 
