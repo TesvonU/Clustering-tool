@@ -1,7 +1,7 @@
 import customtkinter
 import os
 from PIL import Image
-
+import tkinter.filedialog as filedialog
 class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
@@ -14,7 +14,7 @@ class App(customtkinter.CTk):
         #Image paths
         image_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),"test_images")
         self.logo = customtkinter.CTkImage(Image.open(os.path.join(image_path, "cluster.png")),size=(26, 26))
-
+        self.folder = customtkinter.CTkImage(Image.open(os.path.join(image_path, "folder.png")), size=(26, 26))
         #navigation frame
         self.navigation_frame = customtkinter.CTkFrame(self, corner_radius=0)
         self.navigation_frame.grid(row=0, column=0, sticky="nsew")
@@ -83,9 +83,18 @@ class App(customtkinter.CTk):
 
         #frames
         self.dataset_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.dataset_frame.grid_rowconfigure(3, weight=2)
+        self.dataset_frame.grid_columnconfigure(2, weight=2)
+        self.dataset_entry = customtkinter.CTkEntry(self.dataset_frame, placeholder_text="path to Dataset", width=430, height=35, font=customtkinter.CTkFont(size=15))
+        self.dataset_entry.grid(row=4, column=0, pady=20, padx=20, sticky="e")
+        self.dataset_button = customtkinter.CTkButton(self.dataset_frame, image=self.folder, command=self.openfile, text="", fg_color="gray70", width=10, height=25, border_color="gray40", border_width=2)
+        self.dataset_button.grid(row=4, column=1, pady=20, padx=0, sticky="w")
+
         self.processing_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.model_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.view_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
+
+
 
 
 
@@ -128,6 +137,12 @@ class App(customtkinter.CTk):
 
     def change_appearance_mode_event(self, new_appearance_mode):
         customtkinter.set_appearance_mode(new_appearance_mode)
+
+    def openfile(self):
+        filepath = filedialog.askopenfilename()
+        if filepath:
+            self.dataset_entry.delete(0, 'end')  # Clear any existing text
+            self.dataset_entry.insert(0, filepath)  # Insert the selected file path
 
 
 
