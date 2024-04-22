@@ -2,6 +2,7 @@ import customtkinter
 import os
 from PIL import Image
 import tkinter.filedialog as filedialog
+import core
 class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
@@ -10,6 +11,8 @@ class App(customtkinter.CTk):
         self.geometry("700x450")
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
+
+        self.dataset = None
 
         #Image paths
         image_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),"test_images")
@@ -89,6 +92,8 @@ class App(customtkinter.CTk):
         self.dataset_entry.grid(row=4, column=0, pady=20, padx=20, sticky="e")
         self.dataset_button = customtkinter.CTkButton(self.dataset_frame, image=self.folder, command=self.openfile, text="", fg_color="gray70", width=10, height=25, border_color="gray40", border_width=2)
         self.dataset_button.grid(row=4, column=1, pady=20, padx=0, sticky="w")
+        self.dataset_preview = customtkinter.CTkTextbox(self.dataset_frame, width=430)
+        self.dataset_preview.grid(row=0, column=0, pady=20, padx=0)
 
         self.processing_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.model_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
@@ -143,7 +148,8 @@ class App(customtkinter.CTk):
         if filepath:
             self.dataset_entry.delete(0, 'end')  # Clear any existing text
             self.dataset_entry.insert(0, filepath)  # Insert the selected file path
-
+            self.dataset = core.read_file(filepath)
+            print(self.dataset)
 
 
 
