@@ -32,9 +32,7 @@ def read_file(path):
 
 
 def save_dataset(dataset, path):
-
-    print("xawsd")
-    print(dataset)
+    dataset = dataset.reset_index(drop=True, inplace=False)
     dataset.to_csv(path)
 
 
