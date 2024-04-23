@@ -58,31 +58,31 @@ class App(customtkinter.CTk):
                                                       command=self.processing_button_event)
         self.processing_button.grid(row=2, column=0, sticky="ew")
 
+        self.anomaly_button = customtkinter.CTkButton(self.navigation_frame,
+                                                      corner_radius=0,
+                                                      height=40,
+                                                      border_spacing=10,
+                                                      text="Anomaly removal",
+                                                      fg_color="transparent",
+                                                      text_color=("gray10", "gray90"),
+                                                      hover_color=("gray70", "gray30"),
+                                                      font=customtkinter.CTkFont(size=20),
+                                                      command=self.anomaly_button_event)
+        self.anomaly_button.grid(row=3, column=0, sticky="ew")
+
         self.model_button = customtkinter.CTkButton(self.navigation_frame,
                                                       corner_radius=0,
                                                       height=40,
                                                       border_spacing=10,
                                                       text="Model",
                                                       fg_color="transparent",
-                                                      text_color=("gray10", "gray90"),
-                                                      hover_color=("gray70", "gray30"),
-                                                      font=customtkinter.CTkFont(size=20),
-                                                      command=self.model_button_event)
-        self.model_button.grid(row=3, column=0, sticky="ew")
-
-        self.view_button = customtkinter.CTkButton(self.navigation_frame,
-                                                      corner_radius=0,
-                                                      height=40,
-                                                      border_spacing=10,
-                                                      text="View",
-                                                      fg_color="transparent",
                                                       text_color=(
                                                       "gray10", "gray90"),
                                                       hover_color=(
                                                       "gray70", "gray30"),
                                                       font=customtkinter.CTkFont(size=20),
-                                                      command=self.view_button_event)
-        self.view_button.grid(row=4, column=0, sticky="ew")
+                                                      command=self.model_button_event)
+        self.model_button.grid(row=4, column=0, sticky="ew")
 
         self.appearance_mode_menu = customtkinter.CTkOptionMenu(
             self.navigation_frame, values=["Dark", "Light"],
@@ -142,29 +142,45 @@ class App(customtkinter.CTk):
         self.duplicate_button.grid(row=1, column=1, padx=10, pady=5)
         self.scale_button = customtkinter.CTkButton(self.processing_frame_middle, text="Scale", font=customtkinter.CTkFont(size=15), command=self.scale)
         self.scale_button.grid(row=3, column=1, padx=10, pady=5)
-
         self.dimension_entry = customtkinter.CTkEntry(self.processing_frame_middle, placeholder_text="0", font=customtkinter.CTkFont(size=13))
         self.dimension_entry.grid(row=2, column=0, padx=10, pady=5)
         self.pca_button = customtkinter.CTkButton(self.processing_frame_middle, text="PCA reduction", font=customtkinter.CTkFont(size=15), command=self.PCA)
         self.pca_button.grid(row=2, column=1, padx=10, pady=5)
 
-        self.model_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
-        self.view_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        #frame 3
+        self.anomaly_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.anomaly_frame.grid_rowconfigure(3, weight=2)
+        self.anomaly_frame.grid_columnconfigure(3, weight=2)
+        self.dataset_preview3 = customtkinter.CTkTextbox(self.anomaly_frame, width=430, wrap="none")
+        self.dataset_preview3.grid(row=0, column=0, pady=20, padx=50)
+        self.anomaly_frame_middle = customtkinter.CTkFrame(self.anomaly_frame, corner_radius=0, fg_color="transparent")
+        self.anomaly_frame_middle.grid(row=1, column=0)
+        self.anomaly_frame_middle.grid_rowconfigure(3, weight=3)
+        self.anomaly_frame_middle.grid_columnconfigure(3, weight=3)
+        self.global_percentage_entry = customtkinter.CTkEntry(self.anomaly_frame_middle, placeholder_text="0.3", font=customtkinter.CTkFont(size=15))
+        self.global_percentage_entry.grid(row=0, column=0, padx=10, pady=5)
+        self.global_percentage_button = customtkinter.CTkButton(self.anomaly_frame_middle, text="  Same contamination   ", font=customtkinter.CTkFont(size=15), command=self.impute)
+        self.global_percentage_button.grid(row=0, column=1, padx=10, pady=5)
 
+        self.dimension_entry = customtkinter.CTkEntry(self.anomaly_frame_middle, placeholder_text="0.3;0.4;0.5;0.26...", font=customtkinter.CTkFont(size=15))
+        self.dimension_entry.grid(row=1, column=0, padx=10, pady=5)
+        self.pca_button = customtkinter.CTkButton(self.anomaly_frame_middle, text="Different contamination", font=customtkinter.CTkFont(size=15), command=self.PCA)
+        self.pca_button.grid(row=1, column=1, padx=10, pady=5)
 
-
+        self.model_frame = customtkinter.CTkFrame(self, corner_radius=0,
+                                                 fg_color="transparent")
 
         self.frame_change("dataset")
-
+        #!!!!!!!!!! nefungují commandy k anomaliim, jen graficky, bude tma stejny ignore jako u scaling a pca na ID
 
     def frame_change(self, name):
         self.dataset_button.configure(fg_color=("gray75", "gray25") if name == "dataset" else "transparent")
         self.processing_button.configure(fg_color=("gray75", "gray25") if name == "processing" else "transparent")
+        self.anomaly_button.configure(fg_color=("gray75", "gray25") if name == "anomaly" else "transparent")
         self.model_button.configure(fg_color=("gray75", "gray25") if name == "model" else "transparent")
-        self.view_button.configure(fg_color=("gray75", "gray25") if name == "view" else "transparent")
         if name == "dataset":
             self.dataset_frame.grid(row=0, column=1, sticky="nsew")
-            if self.current_frame == 2:
+            if self.dataset:
                 buffer = StringIO()
                 sys.stdout = buffer
                 print(self.dataset[0])
@@ -172,29 +188,36 @@ class App(customtkinter.CTk):
                 df_string = buffer.getvalue()
                 self.dataset_preview.delete("0.0", "end")
                 self.dataset_preview.insert("0.0", df_string)
-            self.current_frame = 1
         else:
             self.dataset_frame.grid_forget()
         if name == "processing":
             self.processing_frame.grid(row=0, column=1, sticky="nsew")
-            self.current_frame = 2
-            buffer = StringIO()
-            sys.stdout = buffer
-            print(self.dataset[0])
-            sys.stdout = sys.__stdout__
-            df_string = buffer.getvalue()
-            self.dataset_preview2.delete("0.0", "end")
-            self.dataset_preview2.insert("0.0", df_string)
+            if self.dataset:
+                buffer = StringIO()
+                sys.stdout = buffer
+                print(self.dataset[0])
+                sys.stdout = sys.__stdout__
+                df_string = buffer.getvalue()
+                self.dataset_preview2.delete("0.0", "end")
+                self.dataset_preview2.insert("0.0", df_string)
         else:
             self.processing_frame.grid_forget()
+        if name == "anomaly":
+            self.anomaly_frame.grid(row=0, column=1, sticky="nsew")
+            if self.dataset:
+                buffer = StringIO()
+                sys.stdout = buffer
+                print(self.dataset[0])
+                sys.stdout = sys.__stdout__
+                df_string = buffer.getvalue()
+                self.dataset_preview3.delete("0.0", "end")
+                self.dataset_preview3.insert("0.0", df_string)
+        else:
+            self.anomaly_frame.grid_forget()
         if name == "model":
             self.model_frame.grid(row=0, column=1, sticky="nsew")
         else:
             self.model_frame.grid_forget()
-        if name == "view":
-            self.view_frame.grid(row=0, column=1, sticky="nsew")
-        else:
-            self.view_frame.grid_forget()
 
 
     def dataset_button_event(self):
@@ -203,11 +226,11 @@ class App(customtkinter.CTk):
     def processing_button_event(self):
         self.frame_change("processing")
 
-    def model_button_event(self):
-        self.frame_change("model")
+    def anomaly_button_event(self):
+        self.frame_change("anomaly")
 
-    def view_button_event(self):
-        self.frame_change("view")
+    def model_button_event(self):
+        self.frame_change("moedel")
 
     def change_appearance_mode_event(self, new_appearance_mode):
         customtkinter.set_appearance_mode(new_appearance_mode)
@@ -334,8 +357,8 @@ class App(customtkinter.CTk):
             df_string = buffer.getvalue()
             self.dataset_preview2.delete("0.0", "end")
             self.dataset_preview2.insert("0.0", df_string)
-            
-            
+
+
     #pca funguje, fixnout chybějící datasrt později
 
 
