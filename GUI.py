@@ -16,6 +16,7 @@ class App(customtkinter.CTk):
         self.grid_columnconfigure(1, weight=1)
 
         self.dataset = None
+        self.current_frame = 1
 
         #Image paths
         image_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),"test_images")
@@ -121,9 +122,26 @@ class App(customtkinter.CTk):
         self.dataset_preview = customtkinter.CTkTextbox(self.dataset_frame, width=430, wrap="none")
         self.dataset_preview.grid(row=0, column=0, pady=20, padx=50)
 
-
-
+        #frame 2
         self.processing_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.processing_frame.grid_rowconfigure(3, weight=2)
+        self.processing_frame.grid_columnconfigure(3, weight=2)
+        self.dataset_preview2 = customtkinter.CTkTextbox(self.processing_frame, width=430, wrap="none")
+        self.dataset_preview2.grid(row=0, column=0, pady=20, padx=50)
+        self.processing_frame_middle = customtkinter.CTkFrame(self.processing_frame, corner_radius=0,fg_color="transparent")
+        self.processing_frame_middle.grid(row=1, column=0)
+        self.processing_frame_middle.grid_rowconfigure(3, weight=3)
+        self.processing_frame_middle.grid_columnconfigure(3, weight=3)
+        self.strategy_entry = customtkinter.CTkEntry(self.processing_frame_middle, placeholder_text="KNN/Simple impute", font=customtkinter.CTkFont(size=14))
+        self.strategy_entry.grid(row=0, column=0, padx=10, pady=5)
+        self.impute_button = customtkinter.CTkButton(self.processing_frame_middle, text="Impute NaNs", font=customtkinter.CTkFont(size=15), command=self.impute)
+        self.impute_button.grid(row=0, column=1, padx=10, pady=5)
+        self.unique_entry = customtkinter.CTkEntry(self.processing_frame_middle, placeholder_text="Unique value", font=customtkinter.CTkFont(size=14))
+        self.unique_entry.grid(row=1, column=0, padx=10, pady=5)
+        self.duplicate_button = customtkinter.CTkButton(self.processing_frame_middle, text="Remove duplicates", font=customtkinter.CTkFont(size=15), command=self.remove_duplicates)
+        self.duplicate_button.grid(row=1, column=1, padx=10, pady=5)
+
+
         self.model_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.view_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
 
@@ -140,10 +158,19 @@ class App(customtkinter.CTk):
         self.view_button.configure(fg_color=("gray75", "gray25") if name == "view" else "transparent")
         if name == "dataset":
             self.dataset_frame.grid(row=0, column=1, sticky="nsew")
+            if self.current_frame == 2:
+                content = self.dataset_preview2.get("0.0", "end")
+                self.dataset_preview.delete("0.0", "end")
+                self.dataset_preview.insert("0.0", content)
+            self.current_frame = 1
         else:
             self.dataset_frame.grid_forget()
         if name == "processing":
             self.processing_frame.grid(row=0, column=1, sticky="nsew")
+            self.current_frame = 2
+            content = self.dataset_preview.get("0.0", "end")
+            self.dataset_preview2.delete("0.0", "end")
+            self.dataset_preview2.insert("0.0", content)
         else:
             self.processing_frame.grid_forget()
         if name == "model":
@@ -154,6 +181,7 @@ class App(customtkinter.CTk):
             self.view_frame.grid(row=0, column=1, sticky="nsew")
         else:
             self.view_frame.grid_forget()
+
 
     def dataset_button_event(self):
         self.frame_change("dataset")
@@ -229,6 +257,32 @@ class App(customtkinter.CTk):
         df_string = buffer.getvalue()
         self.dataset_preview.delete("0.0", "end")
         self.dataset_preview.insert("0.0", df_string)
+
+    def remove_duplicates(self):
+        value = self.unique_entry.get()
+        self.unique_entry.delete(0, "end")
+        self.unique_entry.insert(0, "column name")
+        self.dataset = core.drop_duplicates(self.dataset[0], value)
+        buffer = StringIO()
+        sys.stdout = buffer
+        print(self.dataset[0])
+        sys.stdout = sys.__stdout__
+        df_string = buffer.getvalue()
+        self.dataset_preview2.delete("0.0", "end")
+        self.dataset_preview2.insert("0.0", df_string)
+
+    def impute(self):
+        strategy = self.strategy_entry.get()
+        self.strategy_entry.delete(0, "end")
+        self.strategy_entry.insert(0, "KNN/Simple impute")
+        self.dataset = core.inpute_nan(self.dataset[0], strategy)
+        buffer = StringIO()
+        sys.stdout = buffer
+        print(self.dataset[0])
+        sys.stdout = sys.__stdout__
+        df_string = buffer.getvalue()
+        self.dataset_preview2.delete("0.0", "end")
+        self.dataset_preview2.insert("0.0", df_string)
 
 
 
