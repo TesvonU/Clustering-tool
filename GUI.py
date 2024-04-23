@@ -132,11 +132,11 @@ class App(customtkinter.CTk):
         self.processing_frame_middle.grid(row=1, column=0)
         self.processing_frame_middle.grid_rowconfigure(3, weight=3)
         self.processing_frame_middle.grid_columnconfigure(3, weight=3)
-        self.strategy_entry = customtkinter.CTkEntry(self.processing_frame_middle, placeholder_text="KNN/Simple impute", font=customtkinter.CTkFont(size=14))
+        self.strategy_entry = customtkinter.CTkEntry(self.processing_frame_middle, placeholder_text="KNN/Simple impute", font=customtkinter.CTkFont(size=13))
         self.strategy_entry.grid(row=0, column=0, padx=10, pady=5)
         self.impute_button = customtkinter.CTkButton(self.processing_frame_middle, text="Impute NaNs", font=customtkinter.CTkFont(size=15), command=self.impute)
         self.impute_button.grid(row=0, column=1, padx=10, pady=5)
-        self.unique_entry = customtkinter.CTkEntry(self.processing_frame_middle, placeholder_text="Unique value", font=customtkinter.CTkFont(size=14))
+        self.unique_entry = customtkinter.CTkEntry(self.processing_frame_middle, placeholder_text="Unique value", font=customtkinter.CTkFont(size=13))
         self.unique_entry.grid(row=1, column=0, padx=10, pady=5)
         self.duplicate_button = customtkinter.CTkButton(self.processing_frame_middle, text="Remove duplicates", font=customtkinter.CTkFont(size=15), command=self.remove_duplicates)
         self.duplicate_button.grid(row=1, column=1, padx=10, pady=5)
@@ -275,14 +275,20 @@ class App(customtkinter.CTk):
         strategy = self.strategy_entry.get()
         self.strategy_entry.delete(0, "end")
         self.strategy_entry.insert(0, "KNN/Simple impute")
-        self.dataset = core.inpute_nan(self.dataset[0], strategy)
-        buffer = StringIO()
-        sys.stdout = buffer
-        print(self.dataset[0])
-        sys.stdout = sys.__stdout__
-        df_string = buffer.getvalue()
-        self.dataset_preview2.delete("0.0", "end")
-        self.dataset_preview2.insert("0.0", df_string)
+
+        answer = core.inpute_nan(self.dataset[0], strategy)
+        if len(answer) == 4:
+            self.strategy_entry.delete(0, "end")
+            self.strategy_entry.insert(0, "Remove strings first")
+        else:
+            self.dataset = answer
+            buffer = StringIO()
+            sys.stdout = buffer
+            print(self.dataset[0])
+            sys.stdout = sys.__stdout__
+            df_string = buffer.getvalue()
+            self.dataset_preview2.delete("0.0", "end")
+            self.dataset_preview2.insert("0.0", df_string)
 
 
 
