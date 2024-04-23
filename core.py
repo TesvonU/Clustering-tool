@@ -91,19 +91,22 @@ def drop_duplicates(dataset, unique_value):
 
 
 def inpute_nan(dataset, strategy):
-    if strategy == "KNN" or strategy == "knn":
-        neigh = 6
-        if len(dataset) < 10:
-            neigh = 3
-        imputer_knn = KNNImputer(n_neighbors=neigh)
-        dataset = pd.DataFrame(imputer_knn.fit_transform(dataset), columns=dataset.columns)
-        columns, lines = read_column_line(dataset)
-        return dataset, columns, lines
-    else:
-        imputer_simple = SimpleImputer(strategy='mean')
-        dataset = pd.DataFrame(imputer_simple.fit_transform(dataset), columns=dataset.columns)
-        columns, lines = read_column_line(dataset)
-        return dataset, columns, lines
+    try:
+        if strategy == "KNN" or strategy == "knn":
+            neigh = 6
+            if len(dataset) < 10:
+                neigh = 3
+            imputer_knn = KNNImputer(n_neighbors=neigh)
+            dataset = pd.DataFrame(imputer_knn.fit_transform(dataset), columns=dataset.columns)
+            columns, lines = read_column_line(dataset)
+            return dataset, columns, lines
+        else:
+            imputer_simple = SimpleImputer(strategy='mean')
+            dataset = pd.DataFrame(imputer_simple.fit_transform(dataset), columns=dataset.columns)
+            columns, lines = read_column_line(dataset)
+            return dataset, columns, lines
+    except:
+        return [0, 0, 0, 0]
 
 
 def remove_anomalies(dataset, percentage, autoimpute: bool):
@@ -137,7 +140,7 @@ def remove_anomalies(dataset, percentage, autoimpute: bool):
         anomaly_selected = isolation_forest.predict(column) == -1
         dataset[key][anomaly_selected] = np.nan
 
-    if autoimpute:
+    if autoimpute or True:
         imputer_simple = SimpleImputer(strategy='mean')
         dataset = pd.DataFrame(imputer_simple.fit_transform(dataset), columns=dataset.columns)
 
