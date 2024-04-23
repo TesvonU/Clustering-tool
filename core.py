@@ -154,13 +154,17 @@ def select_irrelevant(irrelevant: list, to_add: str):
 
 
 def scale_dataset(dataset):
-    scaler = StandardScaler()
-    dataset = pd.DataFrame(scaler.fit_transform(dataset), columns=dataset.columns)
-    columns, lines = read_column_line(dataset)
-    return dataset, columns, lines
+    try:
+        scaler = StandardScaler()
+        dataset = pd.DataFrame(scaler.fit_transform(dataset), columns=dataset.columns)
+        columns, lines = read_column_line(dataset)
+        return dataset, columns, lines
+    except:
+        return [0, 0, 0, 0]
 
 
-def pca_reduction(dataset, dimensions: int):
+def pca_reduction(dataset, dimensions):
+    dimensions = int(dimensions)
     pca = PCA(n_components=dimensions)
     dataset = pd.DataFrame(pca.fit_transform(dataset), columns=[i for i in range(dimensions)])
     columns, lines = read_column_line(dataset)
