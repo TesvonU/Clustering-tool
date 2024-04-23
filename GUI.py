@@ -100,11 +100,11 @@ class App(customtkinter.CTk):
         self.dataset_entry.grid(row=0, column=0, pady=20, padx=10, sticky="w")
         self.dataset_button = customtkinter.CTkButton(self.dataset_frame_lower, image=self.folder , command=self.openfile, text="", width=10, height=20, border_color="gray40", border_width=2)
         self.dataset_button.grid(row=0, column=1, pady=20, padx=0, sticky="w")
-        self.save_button2 = customtkinter.CTkButton(self.dataset_frame_lower, image=self.downloadicon, fg_color="gray30", command=self.save_file, text="", width=10, height=20, border_color="gray40", border_width=2)
+        self.save_button2 = customtkinter.CTkButton(self.dataset_frame_lower, image=self.downloadicon, command=self.save_file, text="", width=10, height=20)
         self.save_button2.grid(row=0, column=2, pady=20, padx=10, sticky="w")
         self.dataset_frame_middle = customtkinter.CTkFrame(self.dataset_frame, corner_radius=0,fg_color="transparent")
         self.dataset_frame_middle.grid(row=1, column=0)
-        self.dataset_frame_middle.grid_rowconfigure(2, weight=3)
+        self.dataset_frame_middle.grid_rowconfigure(3, weight=3)
         self.dataset_frame_middle.grid_columnconfigure(3, weight=3)
         self.row_from = customtkinter.CTkEntry(self.dataset_frame_middle, placeholder_text="0", font=customtkinter.CTkFont(size=15))
         self.row_from.grid(row=0, column=0, padx=10, pady=5)
@@ -116,8 +116,8 @@ class App(customtkinter.CTk):
         self.col_from.grid(row=1, column=0, padx=10, pady=5)
         self.col_button = customtkinter.CTkButton(self.dataset_frame_middle, text="Drop columns", font=customtkinter.CTkFont(size=15), command=self.cut_columns)
         self.col_button.grid(row=1, column=2, padx=10, pady=5)
-
-
+        self.sort_button = customtkinter.CTkButton(self.dataset_frame_middle, text="Sort by", font=customtkinter.CTkFont(size=15), command=self.sort_by)
+        self.sort_button.grid(row=1, column=1, padx=10, pady=5)
         self.dataset_preview = customtkinter.CTkTextbox(self.dataset_frame, width=430, wrap="none")
         self.dataset_preview.grid(row=0, column=0, pady=20, padx=50)
 
@@ -216,6 +216,22 @@ class App(customtkinter.CTk):
         df_string = buffer.getvalue()
         self.dataset_preview.delete("0.0", "end")
         self.dataset_preview.insert("0.0", df_string)
+
+    def sort_by(self):
+        sort_column = self.col_from.get()
+        self.col_from.delete(0, "end")
+        self.col_from.insert(0, "column name")
+        self.dataset = core.sort_dataset(self.dataset[0], sort_column)
+        buffer = StringIO()
+        sys.stdout = buffer
+        print(self.dataset[0])
+        sys.stdout = sys.__stdout__
+        df_string = buffer.getvalue()
+        self.dataset_preview.delete("0.0", "end")
+        self.dataset_preview.insert("0.0", df_string)
+
+
+
 
 
 
