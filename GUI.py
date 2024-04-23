@@ -21,6 +21,7 @@ class App(customtkinter.CTk):
         image_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),"test_images")
         self.logo = customtkinter.CTkImage(Image.open(os.path.join(image_path, "cluster.png")),size=(26, 26))
         self.folder = customtkinter.CTkImage(Image.open(os.path.join(image_path, "folder.png")), size=(26, 26))
+        self.downloadicon = customtkinter.CTkImage(Image.open(os.path.join(image_path, "download.png")), size=(26, 26))
         #navigation frame
         self.navigation_frame = customtkinter.CTkFrame(self, corner_radius=0)
         self.navigation_frame.grid(row=0, column=0, sticky="nsew")
@@ -87,16 +88,40 @@ class App(customtkinter.CTk):
             command=self.change_appearance_mode_event)
         self.appearance_mode_menu.grid(row=5, column=0, padx=20, pady=20, sticky="s")
 
-        #frames
+        #frame 1
         self.dataset_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.dataset_frame.grid_rowconfigure(3, weight=2)
-        self.dataset_frame.grid_columnconfigure(2, weight=2)
-        self.dataset_entry = customtkinter.CTkEntry(self.dataset_frame, placeholder_text="path to Dataset", width=430, height=35, font=customtkinter.CTkFont(size=15))
-        self.dataset_entry.grid(row=4, column=0, pady=20, padx=20, sticky="e")
-        self.dataset_button = customtkinter.CTkButton(self.dataset_frame, image=self.folder, command=self.openfile, text="", fg_color="gray70", width=10, height=25, border_color="gray40", border_width=2)
-        self.dataset_button.grid(row=4, column=1, pady=20, padx=0, sticky="w")
+        self.dataset_frame.grid_columnconfigure(3, weight=2)
+        self.dataset_frame_lower = customtkinter.CTkFrame(self.dataset_frame, corner_radius=0,fg_color="transparent")
+        self.dataset_frame_lower.grid(row=4, column=0)
+        self.dataset_frame.grid_rowconfigure(1, weight=3)
+        self.dataset_frame.grid_columnconfigure(3, weight=3)
+        self.dataset_entry = customtkinter.CTkEntry(self.dataset_frame_lower, placeholder_text="path to Dataset", width=350, height=35, font=customtkinter.CTkFont(size=15))
+        self.dataset_entry.grid(row=0, column=0, pady=20, padx=10, sticky="w")
+        self.dataset_button = customtkinter.CTkButton(self.dataset_frame_lower, image=self.folder , command=self.openfile, text="", width=10, height=20, border_color="gray40", border_width=2)
+        self.dataset_button.grid(row=0, column=1, pady=20, padx=0, sticky="w")
+        self.save_button2 = customtkinter.CTkButton(self.dataset_frame_lower, image=self.downloadicon, fg_color="gray30", command=self.save_file, text="", width=10, height=20, border_color="gray40", border_width=2)
+        self.save_button2.grid(row=0, column=2, pady=20, padx=10, sticky="w")
+        self.dataset_frame_middle = customtkinter.CTkFrame(self.dataset_frame, corner_radius=0,fg_color="transparent")
+        self.dataset_frame_middle.grid(row=1, column=0)
+        self.dataset_frame_middle.grid_rowconfigure(2, weight=3)
+        self.dataset_frame_middle.grid_columnconfigure(3, weight=3)
+        self.row_from = customtkinter.CTkEntry(self.dataset_frame_middle, placeholder_text="0", font=customtkinter.CTkFont(size=15))
+        self.row_from.grid(row=0, column=0, padx=10, pady=5)
+        self.row_to = customtkinter.CTkEntry(self.dataset_frame_middle, placeholder_text="0", font=customtkinter.CTkFont(size=15))
+        self.row_to.grid(row=0, column=1, padx=10, pady=5)
+        self.row_button = customtkinter.CTkButton(self.dataset_frame_middle, text="Cut rows", font=customtkinter.CTkFont(size=15), command=self.cut_rows)
+        self.row_button.grid(row=0, column=2, padx=10, pady=5)
+        self.col_from = customtkinter.CTkEntry(self.dataset_frame_middle, placeholder_text="Column name", font=customtkinter.CTkFont(size=15))
+        self.col_from.grid(row=1, column=0, padx=10, pady=5)
+        self.col_button = customtkinter.CTkButton(self.dataset_frame_middle, text="Drop columns", font=customtkinter.CTkFont(size=15), command=self.cut_columns)
+        self.col_button.grid(row=1, column=2, padx=10, pady=5)
+
+
         self.dataset_preview = customtkinter.CTkTextbox(self.dataset_frame, width=430, wrap="none")
-        self.dataset_preview.grid(row=0, column=0, pady=20, padx=0)
+        self.dataset_preview.grid(row=0, column=0, pady=20, padx=50)
+
+
 
         self.processing_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.model_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
@@ -151,7 +176,6 @@ class App(customtkinter.CTk):
             self.dataset_entry.delete(0, 'end')  # Clear any existing text
             self.dataset_entry.insert(0, filepath)  # Insert the selected file path
             self.dataset = core.read_file(filepath)
-
             buffer = StringIO()
             sys.stdout = buffer
             print(self.dataset)
@@ -159,8 +183,39 @@ class App(customtkinter.CTk):
             df_string = buffer.getvalue()
             self.dataset_preview.insert("0.0", df_string)
 
+    def save_file(self):
+        filepath = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+        if filepath:
+            core.save_dataset(self.dataset[0], filepath)
 
+    def cut_rows(self):
+        row_from = self.row_from.get()
+        row_to = self.row_to.get()
+        self.dataset = core.drop_lines(self.dataset[0], row_from, row_to)
+        self.row_to.delete(0, "end")
+        self.row_to.insert(0, "0")
+        self.row_from.delete(0, "end")
+        self.row_from.insert(0, "0")
+        buffer = StringIO()
+        sys.stdout = buffer
+        print(self.dataset[0])
+        sys.stdout = sys.__stdout__
+        df_string = buffer.getvalue()
+        self.dataset_preview.delete("0.0", "end")
+        self.dataset_preview.insert("0.0", df_string)
 
+    def cut_columns(self):
+        col_from = self.col_from.get()
+        self.dataset = core.drop_column(self.dataset[0], col_from )
+        self.col_from.delete(0, "end")
+        self.col_from.insert(0, "column name")
+        buffer = StringIO()
+        sys.stdout = buffer
+        print(self.dataset[0])
+        sys.stdout = sys.__stdout__
+        df_string = buffer.getvalue()
+        self.dataset_preview.delete("0.0", "end")
+        self.dataset_preview.insert("0.0", df_string)
 
 
 
