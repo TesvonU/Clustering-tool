@@ -107,9 +107,9 @@ class App(customtkinter.CTk):
         self.dataset_frame_middle.grid(row=1, column=0)
         self.dataset_frame_middle.grid_rowconfigure(3, weight=3)
         self.dataset_frame_middle.grid_columnconfigure(3, weight=3)
-        self.row_from = customtkinter.CTkEntry(self.dataset_frame_middle, placeholder_text="0", font=customtkinter.CTkFont(size=15))
+        self.row_from = customtkinter.CTkEntry(self.dataset_frame_middle, placeholder_text="0000", font=customtkinter.CTkFont(size=15))
         self.row_from.grid(row=0, column=0, padx=10, pady=5)
-        self.row_to = customtkinter.CTkEntry(self.dataset_frame_middle, placeholder_text="0", font=customtkinter.CTkFont(size=15))
+        self.row_to = customtkinter.CTkEntry(self.dataset_frame_middle, placeholder_text="0000", font=customtkinter.CTkFont(size=15))
         self.row_to.grid(row=0, column=1, padx=10, pady=5)
         self.row_button = customtkinter.CTkButton(self.dataset_frame_middle, text="Cut rows", font=customtkinter.CTkFont(size=15), command=self.cut_rows)
         self.row_button.grid(row=0, column=2, padx=10, pady=5)
@@ -132,7 +132,7 @@ class App(customtkinter.CTk):
         self.processing_frame_middle.grid(row=1, column=0)
         self.processing_frame_middle.grid_rowconfigure(3, weight=3)
         self.processing_frame_middle.grid_columnconfigure(3, weight=3)
-        self.strategy_entry = customtkinter.CTkEntry(self.processing_frame_middle, placeholder_text="KNN/Simple impute", font=customtkinter.CTkFont(size=13))
+        self.strategy_entry = customtkinter.CTkEntry(self.processing_frame_middle, placeholder_text="KNN/Simple", font=customtkinter.CTkFont(size=13))
         self.strategy_entry.grid(row=0, column=0, padx=10, pady=5)
         self.impute_button = customtkinter.CTkButton(self.processing_frame_middle, text="Impute NaNs", font=customtkinter.CTkFont(size=15), command=self.impute)
         self.impute_button.grid(row=0, column=1, padx=10, pady=5)
@@ -140,7 +140,13 @@ class App(customtkinter.CTk):
         self.unique_entry.grid(row=1, column=0, padx=10, pady=5)
         self.duplicate_button = customtkinter.CTkButton(self.processing_frame_middle, text="Remove duplicates", font=customtkinter.CTkFont(size=15), command=self.remove_duplicates)
         self.duplicate_button.grid(row=1, column=1, padx=10, pady=5)
+        self.scale_button = customtkinter.CTkButton(self.processing_frame_middle, text="Scale", font=customtkinter.CTkFont(size=15), command=self.scale)
+        self.scale_button.grid(row=3, column=1, padx=10, pady=5)
 
+        self.dimension_entry = customtkinter.CTkEntry(self.processing_frame_middle, placeholder_text="0", font=customtkinter.CTkFont(size=13))
+        self.dimension_entry.grid(row=2, column=0, padx=10, pady=5)
+        self.pca_button = customtkinter.CTkButton(self.processing_frame_middle, text="PCA reduction", font=customtkinter.CTkFont(size=15), command=self.PCA)
+        self.pca_button.grid(row=2, column=1, padx=10, pady=5)
 
         self.model_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.view_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
@@ -159,18 +165,26 @@ class App(customtkinter.CTk):
         if name == "dataset":
             self.dataset_frame.grid(row=0, column=1, sticky="nsew")
             if self.current_frame == 2:
-                content = self.dataset_preview2.get("0.0", "end")
+                buffer = StringIO()
+                sys.stdout = buffer
+                print(self.dataset[0])
+                sys.stdout = sys.__stdout__
+                df_string = buffer.getvalue()
                 self.dataset_preview.delete("0.0", "end")
-                self.dataset_preview.insert("0.0", content)
+                self.dataset_preview.insert("0.0", df_string)
             self.current_frame = 1
         else:
             self.dataset_frame.grid_forget()
         if name == "processing":
             self.processing_frame.grid(row=0, column=1, sticky="nsew")
             self.current_frame = 2
-            content = self.dataset_preview.get("0.0", "end")
+            buffer = StringIO()
+            sys.stdout = buffer
+            print(self.dataset[0])
+            sys.stdout = sys.__stdout__
+            df_string = buffer.getvalue()
             self.dataset_preview2.delete("0.0", "end")
-            self.dataset_preview2.insert("0.0", content)
+            self.dataset_preview2.insert("0.0", df_string)
         else:
             self.processing_frame.grid_forget()
         if name == "model":
@@ -209,6 +223,7 @@ class App(customtkinter.CTk):
             print(self.dataset)
             sys.stdout = sys.__stdout__
             df_string = buffer.getvalue()
+            self.dataset_preview.delete("0.0", "end")
             self.dataset_preview.insert("0.0", df_string)
 
     def save_file(self):
@@ -236,7 +251,6 @@ class App(customtkinter.CTk):
         col_from = self.col_from.get()
         self.dataset = core.drop_column(self.dataset[0], col_from )
         self.col_from.delete(0, "end")
-        self.col_from.insert(0, "column name")
         buffer = StringIO()
         sys.stdout = buffer
         print(self.dataset[0])
@@ -248,7 +262,6 @@ class App(customtkinter.CTk):
     def sort_by(self):
         sort_column = self.col_from.get()
         self.col_from.delete(0, "end")
-        self.col_from.insert(0, "column name")
         self.dataset = core.sort_dataset(self.dataset[0], sort_column)
         buffer = StringIO()
         sys.stdout = buffer
@@ -261,7 +274,6 @@ class App(customtkinter.CTk):
     def remove_duplicates(self):
         value = self.unique_entry.get()
         self.unique_entry.delete(0, "end")
-        self.unique_entry.insert(0, "column name")
         self.dataset = core.drop_duplicates(self.dataset[0], value)
         buffer = StringIO()
         sys.stdout = buffer
@@ -274,12 +286,29 @@ class App(customtkinter.CTk):
     def impute(self):
         strategy = self.strategy_entry.get()
         self.strategy_entry.delete(0, "end")
-        self.strategy_entry.insert(0, "KNN/Simple impute")
 
         answer = core.inpute_nan(self.dataset[0], strategy)
         if len(answer) == 4:
+            self.dataset_preview2.insert("0.0", "REMOVE STRINGS FIRST\n")
             self.strategy_entry.delete(0, "end")
             self.strategy_entry.insert(0, "Remove strings first")
+        else:
+            self.dataset = answer
+            buffer = StringIO()
+            sys.stdout = buffer
+            if self.dataset is not tuple:
+                print(self.dataset)
+            else:
+                print(self.dataset[0])
+            sys.stdout = sys.__stdout__
+            df_string = buffer.getvalue()
+            self.dataset_preview2.delete("0.0", "end")
+            self.dataset_preview2.insert("0.0", df_string)
+
+    def scale(self):
+        answer = core.scale_dataset(self.dataset[0])
+        if len(answer) == 4:
+            self.dataset_preview2.insert("0.0", "REMOVE STRINGS FIRST\n")
         else:
             self.dataset = answer
             buffer = StringIO()
@@ -289,6 +318,25 @@ class App(customtkinter.CTk):
             df_string = buffer.getvalue()
             self.dataset_preview2.delete("0.0", "end")
             self.dataset_preview2.insert("0.0", df_string)
+
+    def PCA(self):
+        dimensions = self.dimension_entry.get()
+        self.dimension_entry.delete(0, "end")
+        answer = core.pca_reduction(self.dataset[0], dimensions)
+        if len(answer) == 4:
+            self.dataset_preview2.insert("0.0", "REMOVE STRINGS AND NaNs FIRST\n")
+        else:
+            self.dataset = answer
+            buffer = StringIO()
+            sys.stdout = buffer
+            print(self.dataset[0])
+            sys.stdout = sys.__stdout__
+            df_string = buffer.getvalue()
+            self.dataset_preview2.delete("0.0", "end")
+            self.dataset_preview2.insert("0.0", df_string)
+            
+            
+    #pca funguje, fixnout chybějící datasrt později
 
 
 
