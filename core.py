@@ -18,12 +18,23 @@ pd.set_option('display.max_columns', None)
 
 
 def read_file(path):
-    dataset = pd.read_csv(path)
+    try:
+        dataset = pd.read_csv(path).drop(columns=["Unnamed: 0.1"])
+        print("main")
+    except:
+        dataset = pd.read_csv(path)
+        print("exception")
+
     columns, lines = read_column_line(dataset)
+    print(columns)
+    print(dataset)
     return dataset, columns, lines
 
 
 def save_dataset(dataset, path):
+
+    print("xawsd")
+    print(dataset)
     dataset.to_csv(path)
 
 
@@ -41,12 +52,18 @@ def drop_column(dataset, to_drop):
     columns, lines = read_column_line(dataset)
     if to_drop in columns:
         dataset = dataset.drop(columns=[to_drop])
+        dataset = dataset.reset_index(drop=True)
     columns, lines = read_column_line(dataset)
     return dataset, columns, lines
 
 
 def drop_lines(dataset, lower, upper):
     columns, lines = read_column_line(dataset)
+    try:
+        lower = int(lower)
+        upper = int(upper)
+    except:
+        pass
     if type(lower) is int and type(upper) is int:
         if lower < 0:
             lower = 0
@@ -57,6 +74,7 @@ def drop_lines(dataset, lower, upper):
         if upper > lines:
             upper = lines - 1
         dataset = dataset.drop(index=range(lower, upper + 1))
+        dataset = dataset.reset_index(drop=True)
     columns, lines = read_column_line(dataset)
     return dataset, columns, lines
 
@@ -209,7 +227,7 @@ def hdbscan_clustering(dataset, min_cluster_size=5, min_samples=5, alpha=1.0, cl
 
 
 
-
+'''
 output = read_file("champions.csv")
 dataset = output[0]
 column = output[1]
@@ -251,7 +269,5 @@ line = output[2]
 print_dataset(dataset)
 print_dataset(column)
 print_dataset(line)
-
-
-
 save_dataset(dataset, "small_set.csv")
+'''
