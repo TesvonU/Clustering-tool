@@ -7,6 +7,7 @@ import core
 from io import StringIO
 import sys
 import numpy as np
+import pandas as pd
 
 class App(customtkinter.CTk):
     def __init__(self):
@@ -29,8 +30,7 @@ class App(customtkinter.CTk):
             'AffinityPropagation': {'damping': 0.5, 'max_iter': 200, 'convergence_iter': 15, 'preference': None, 'affinity': 'euclidean'},
             'SpectralClustering': {'n_clusters': 3, 'eigen_solver': None, 'random_state': None, 'n_init': 10, 'gamma': 1.0, 'n_neighbors': 10, 'eigen_tol': 0.0, 'assign_labels': 'kmeans'},
             'OPTICS': {'min_samples': 5, 'max_eps': np.inf, 'metric': 'minkowski', 'p': 2, 'cluster_method': 'xi', 'eps': None, 'xi': 0.05, 'predecessor_correction': True, 'min_cluster_size': None},
-            'HDBSCAN': {'min_cluster_size': 5, 'min_samples': 5, 'alpha': 1.0, 'cluster_selection_epsilon': 0.0, 'metric': 'euclidean', 'p': None, 'leaf_size': 40, 'algorithm': 'best', 'core_dist_n_jobs': 4, 'allow_single_cluster': False, 'gen_min_span_tree': False, 'approx_min_span_tree': True, 'gen_unexp_graph': False, 'match_reference_implementation': False, 'prune_threshold': None, 'mtree_build_params': None, 'mtree_leaf_array': None, 'compact': False, 'prediction_data': False, 'cluster_selection_method': 'eom', 'cluster_selection_criteria': 'leaf'}
-            }
+                            }
 
         #Image paths
         image_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),"test_images")
@@ -190,10 +190,10 @@ class App(customtkinter.CTk):
         self.model_frame_middle.grid(row=1, column=0)
         self.model_frame_middle.grid_rowconfigure(3, weight=3)
         self.model_frame_middle.grid_columnconfigure(3, weight=3)
-        self.model_selection = customtkinter.CTkComboBox(self.model_frame_middle, values=[key for key in self.model_dict], command=self.update_model_settings)
+        self.model_selection = customtkinter.CTkComboBox(self.model_frame_middle, values=[key for key in self.model_dict], command=self.update_model_settings, width=200)
         self.model_selection.grid(row=0, column=2, padx=10, pady=10)
         self.update_model_settings(0)
-        self.label_button = customtkinter.CTkButton(self.model_frame_middle, text="Create Labels", font=customtkinter.CTkFont(size=15), command=self.remove_anomaly)
+        self.label_button = customtkinter.CTkButton(self.model_frame_middle, text="Create Labels", font=customtkinter.CTkFont(size=15), command=self.create_labels)
         self.label_button.grid(row=0, column=1, padx=10, pady=10)
 
 
@@ -391,7 +391,10 @@ class App(customtkinter.CTk):
             self.model_settings.delete("1.0", "end")
             for param, value in params.items():
                 self.model_settings.insert("end", f"{param}: {value}\n")
-            self.model_settings.insert("end", "\nParameter description can be found in documentation.")
+            self.model_settings.insert("end", "\nParameter description can be found in documentation.\n")
+            print(selected)
+            if selected in ["AgglomerativeClustering", "AffinityPropagation", "SpectralClustering"]:
+                self.model_settings.insert("end", "Model is not optimal for larger datasets.")
 
 
 
@@ -445,6 +448,34 @@ class App(customtkinter.CTk):
             df_string = buffer.getvalue()
             self.dataset_preview3.delete("0.0", "end")
             self.dataset_preview3.insert("0.0", df_string)
+
+    def create_labels(self):
+        model_name = self.model_selection.get()
+        if model_name in self.model_dict:
+            model_params_text = self.model_settings.get("1.0", "end")
+            model_params_lines = model_params_text.split("\n")
+            model_params = {}
+            for line in model_params_lines:
+                param_value = line.split(":")
+                if len(param_value) == 2:
+                    param = param_value[0].strip()
+                    value = param_value[1].strip()
+                    model_params[param] = value
+            result = core.run_model(model_name, model_params, self.dataset[0])
+            print("Labels:", result)
+            result_df = pd.DataFrame({"ID": self.dataset[0]["ID"], "Label": result})
+            root = tk.Tk()
+            root.withdraw()
+            file_path = filedialog.asksaveasfilename(defaultextension=".csv",
+                                                     filetypes=[("CSV files",
+                                                                 "*.csv")])
+            if file_path:
+                result_df.to_csv(file_path, index=False)
+                print("Data saved")
+            else:
+                print("No file selected")
+        else:
+            print("Invalid model name:", model_name)
 
 
     #pca funguje, fixnout chybějící datasrt později
