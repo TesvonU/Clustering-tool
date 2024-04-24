@@ -159,13 +159,12 @@ class App(customtkinter.CTk):
         self.anomaly_frame_middle.grid_columnconfigure(3, weight=3)
         self.global_percentage_entry = customtkinter.CTkEntry(self.anomaly_frame_middle, placeholder_text="0.3", font=customtkinter.CTkFont(size=15))
         self.global_percentage_entry.grid(row=0, column=0, padx=10, pady=5)
-        self.global_percentage_button = customtkinter.CTkButton(self.anomaly_frame_middle, text="  Same contamination   ", font=customtkinter.CTkFont(size=15), command=self.impute)
+        self.global_percentage_button = customtkinter.CTkButton(self.anomaly_frame_middle, text="  Same contamination   ", font=customtkinter.CTkFont(size=15), command=self.remove_anomaly)
         self.global_percentage_button.grid(row=0, column=1, padx=10, pady=5)
-
-        self.dimension_entry = customtkinter.CTkEntry(self.anomaly_frame_middle, placeholder_text="0.3;0.4;0.5;0.26...", font=customtkinter.CTkFont(size=15))
-        self.dimension_entry.grid(row=1, column=0, padx=10, pady=5)
-        self.pca_button = customtkinter.CTkButton(self.anomaly_frame_middle, text="Different contamination", font=customtkinter.CTkFont(size=15), command=self.PCA)
-        self.pca_button.grid(row=1, column=1, padx=10, pady=5)
+        self.differnt_percentage_entry = customtkinter.CTkEntry(self.anomaly_frame_middle, placeholder_text="0.3;0.4;0.5;0.26...", font=customtkinter.CTkFont(size=15))
+        self.differnt_percentage_entry.grid(row=1, column=0, padx=10, pady=5)
+        self.differnt_percentage = customtkinter.CTkButton(self.anomaly_frame_middle, text="Different contamination", font=customtkinter.CTkFont(size=15), command=self.remove_anomaly)
+        self.differnt_percentage.grid(row=1, column=1, padx=10, pady=5)
 
         self.model_frame = customtkinter.CTkFrame(self, corner_radius=0,
                                                  fg_color="transparent")
@@ -357,6 +356,31 @@ class App(customtkinter.CTk):
             df_string = buffer.getvalue()
             self.dataset_preview2.delete("0.0", "end")
             self.dataset_preview2.insert("0.0", df_string)
+
+    def remove_anomaly(self):
+        percentage = self.global_percentage_entry.get()
+        if ";" in percentage:
+            percentage = percentage.split(";")
+        else:
+            if percentage == "":
+                percentage = "0.3"
+            percentage = [percentage]
+        print(percentage)
+        self.global_percentage_entry.delete(0, "end")
+        answer = core.remove_anomalies(self.dataset[0], percentage)
+        print("ans", answer)
+        if len(answer) == 4:
+            self.dataset_preview2.insert("0.0",
+                                         "REMOVE STRINGS AND NaNs FIRST\n")
+        else:
+            self.dataset = answer
+            buffer = StringIO()
+            sys.stdout = buffer
+            print(self.dataset[0])
+            sys.stdout = sys.__stdout__
+            df_string = buffer.getvalue()
+            self.dataset_preview3.delete("0.0", "end")
+            self.dataset_preview3.insert("0.0", df_string)
 
 
     #pca funguje, fixnout chybějící datasrt později
