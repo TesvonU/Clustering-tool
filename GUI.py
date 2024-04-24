@@ -6,6 +6,8 @@ import tkinter as tk
 import core
 from io import StringIO
 import sys
+import numpy as np
+
 class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
@@ -17,6 +19,18 @@ class App(customtkinter.CTk):
 
         self.dataset = None
         self.current_frame = 1
+        self.model_dict = {
+            'KMeans': {'n_clusters': 3, 'init': 'k-means++', 'n_init': 10, 'max_iter': 300, 'tol': 1e-4, 'random_state': 42},
+            'AgglomerativeClustering': {'n_clusters': 3, 'affinity': 'euclidean', 'linkage': 'ward'},
+            'DBSCAN': {'eps': 0.5, 'min_samples': 5, 'metric': 'euclidean'},
+            'MeanShift': {'bandwidth': 0.5, 'seeds': None, 'bin_seeding': False, 'cluster_all': True, 'min_bin_freq': 1, 'max_iter': 300},
+            'GaussianMixture': {'n_components': 3, 'covariance_type': 'full', 'tol': 1e-3, 'max_iter': 100, 'n_init': 1, 'init_params': 'kmeans', 'random_state': 42},
+            'Birch': {'threshold': 0.5, 'branching_factor': 50, 'n_clusters': 3, 'compute_labels': True},
+            'AffinityPropagation': {'damping': 0.5, 'max_iter': 200, 'convergence_iter': 15, 'preference': None, 'affinity': 'euclidean'},
+            'SpectralClustering': {'n_clusters': 3, 'eigen_solver': None, 'random_state': None, 'n_init': 10, 'gamma': 1.0, 'n_neighbors': 10, 'eigen_tol': 0.0, 'assign_labels': 'kmeans'},
+            'OPTICS': {'min_samples': 5, 'max_eps': np.inf, 'metric': 'minkowski', 'p': 2, 'cluster_method': 'xi', 'eps': None, 'xi': 0.05, 'predecessor_correction': True, 'min_cluster_size': None},
+            'HDBSCAN': {'min_cluster_size': 5, 'min_samples': 5, 'alpha': 1.0, 'cluster_selection_epsilon': 0.0, 'metric': 'euclidean', 'p': None, 'leaf_size': 40, 'algorithm': 'best', 'core_dist_n_jobs': 4, 'allow_single_cluster': False, 'gen_min_span_tree': False, 'approx_min_span_tree': True, 'gen_unexp_graph': False, 'match_reference_implementation': False, 'prune_threshold': None, 'mtree_build_params': None, 'mtree_leaf_array': None, 'compact': False, 'prediction_data': False, 'cluster_selection_method': 'eom', 'cluster_selection_criteria': 'leaf'}
+            }
 
         #Image paths
         image_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),"test_images")
@@ -165,8 +179,23 @@ class App(customtkinter.CTk):
         self.differnt_percentage_entry.grid(row=1, column=0, padx=10, pady=5)
         self.differnt_percentage = customtkinter.CTkButton(self.anomaly_frame_middle, text="Different contamination", font=customtkinter.CTkFont(size=15), command=self.remove_anomaly2)
         self.differnt_percentage.grid(row=1, column=1, padx=10, pady=5)
-
+        #frame4
         self.model_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.model_frame.grid_rowconfigure(3, weight=2)
+        self.model_frame.grid_columnconfigure(3, weight=2)
+        self.model_settings = customtkinter.CTkTextbox(self.model_frame, width=430, wrap="none", font=customtkinter.CTkFont(size=15))
+        self.model_settings.grid(row=0, column=0, pady=20, padx=50)
+        self.model_settings.insert("0.0", "NO MODEL SELECTED")
+        self.model_frame_middle = customtkinter.CTkFrame(self.model_frame, corner_radius=0, fg_color="transparent")
+        self.model_frame_middle.grid(row=1, column=0)
+        self.model_frame_middle.grid_rowconfigure(3, weight=3)
+        self.model_frame_middle.grid_columnconfigure(3, weight=3)
+        self.model_selection = customtkinter.CTkComboBox(self.model_frame_middle, values=[key for key in self.model_dict], command=self.update_model_settings)
+        self.model_selection.grid(row=0, column=2, padx=10, pady=10)
+        self.update_model_settings(0)
+        self.label_button = customtkinter.CTkButton(self.model_frame_middle, text="Create Labels", font=customtkinter.CTkFont(size=15), command=self.remove_anomaly)
+        self.label_button.grid(row=0, column=1, padx=10, pady=10)
+
 
         self.frame_change("dataset")
 
@@ -227,7 +256,7 @@ class App(customtkinter.CTk):
         self.frame_change("anomaly")
 
     def model_button_event(self):
-        self.frame_change("moedel")
+        self.frame_change("model")
 
     def change_appearance_mode_event(self, new_appearance_mode):
         customtkinter.set_appearance_mode(new_appearance_mode)
@@ -354,6 +383,17 @@ class App(customtkinter.CTk):
             df_string = buffer.getvalue()
             self.dataset_preview2.delete("0.0", "end")
             self.dataset_preview2.insert("0.0", df_string)
+
+    def update_model_settings(self, _):
+        selected = self.model_selection.get()
+        if selected in self.model_dict:
+            params = self.model_dict[selected]
+            self.model_settings.delete("1.0", "end")
+            for param, value in params.items():
+                self.model_settings.insert("end", f"{param}: {value}\n")
+            self.model_settings.insert("end", "\nParameter description can be found in documentation.")
+
+
 
     def remove_anomaly(self):
         percentage = self.global_percentage_entry.get()
