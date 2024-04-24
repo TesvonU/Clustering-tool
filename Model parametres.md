@@ -85,14 +85,7 @@
      - Options: `"xi"`, `"dbscan"`.
    - `xi`: Determines the minimum steepness on the reachability plot for a cluster boundary.
      - *Estimated Range:* Typically between 0.01 and 0.2.
-
-10. **HDBSCAN Clustering:**
-    - `min_cluster_size`: Minimum size of clusters.
-    - `min_samples`: Number of samples in a neighborhood for a point to be a core point.
-    - `alpha`: Constant balancing density terms.
-    - `metric`: Metric to use.
-      - Options: `"euclidean"`, `"manhattan"`, `"chebyshev"`, `"minkowski"`, `"cityblock"`, `"cosine"`.
-    - `p`: Power of the Minkowski metric.
+       
 
 These estimates serve as initial guidelines and may require adjustments based on the dataset characteristics.
 
