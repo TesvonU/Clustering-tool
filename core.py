@@ -122,9 +122,14 @@ def remove_anomalies(dataset, percentage):
         key = column
         if len(percentage) == 1:
             value = float(percentage[0])
+            if value > 0.5:
+                value = 0.5
         else:
             value = float(percentage.pop(0))
-        percentage_dict[key] = value
+            if value > 0.5:
+                value = 0.5
+        if value > 0:
+            percentage_dict[key] = value
 
     for key, value in percentage_dict.items():
         column = dataset_reduced[[key]].copy()
