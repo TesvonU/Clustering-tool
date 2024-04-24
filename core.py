@@ -1,4 +1,5 @@
 import pandas as pd
+import sklearn
 import warnings
 from sklearn.impute import KNNImputer
 from sklearn.ensemble import IsolationForest
@@ -8,7 +9,6 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.mixture import GaussianMixture
 from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN, MeanShift, Birch, AffinityPropagation, SpectralClustering, OPTICS
-import hdbscan
 
 # settings for easier console display
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -90,6 +90,7 @@ def drop_duplicates(dataset, unique_value):
     if unique_value not in columns:
         unique_value = "ID"
     dataset = dataset.drop_duplicates(subset=unique_value, keep='first')
+    dataset = dataset.reset_index(drop=True)
     columns, lines = read_column_line(dataset)
     return dataset, columns, lines
 
@@ -152,7 +153,7 @@ def pca_reduction(dataset, dimensions):
         pca = PCA(n_components=dimensions)
         columns_to_reduce = [col for col in dataset.columns if col != 'ID']
         reduced_data = pca.fit_transform(dataset[columns_to_reduce])
-        reduced_dataset = pd.DataFrame(reduced_data, columns=[i for i in range(dimensions)])
+        reduced_dataset = pd.DataFrame(reduced_data, columns=[str(i) for i in range(dimensions)])
         dataset_with_id = pd.concat([dataset['ID'], reduced_dataset], axis=1)
         columns, lines = read_column_line(dataset_with_id)
         return dataset_with_id, columns, lines
@@ -173,63 +174,157 @@ def scale_dataset(dataset):
         return [0, 0, 0, 0]
 
 
-def kmeans_clustering(dataset, n_clusters=3, init='k-means++', n_init=10, max_iter=300, tol=1e-4, random_state=42):
+def run_model(clustering_algorithm, parameters, dataset):
+    dataset = dataset.drop(columns=["ID"])
+    if clustering_algorithm == "KMeans":
+        labels = kmeans_clustering(dataset, **parameters)
+    elif clustering_algorithm == "AgglomerativeClustering":
+        labels = agglomerative_clustering(dataset, **parameters)
+    elif clustering_algorithm == "DBSCAN":
+        labels = dbscan_clustering(dataset, **parameters)
+    elif clustering_algorithm == "MeanShift":
+        labels = mean_shift_clustering(dataset, **parameters)
+    elif clustering_algorithm == "GaussianMixture":
+        labels = gaussian_mixture_clustering(dataset, **parameters)
+    elif clustering_algorithm == "Birch":
+        labels = birch_clustering(dataset, **parameters)
+    elif clustering_algorithm == "AffinityPropagation":
+        labels = affinity_propagation_clustering(dataset, **parameters)
+    elif clustering_algorithm == "SpectralClustering":
+        labels = spectral_clustering(dataset, **parameters)
+    elif clustering_algorithm == "OPTICS":
+        labels = optics_clustering(dataset, **parameters)
+    else:
+        raise ValueError("Invalid clustering algorithm name")
+
+    return labels
+
+def kmeans_clustering(dataset, n_clusters=3, init="k-means++", n_init=10, max_iter=300, tol=1e-4, random_state=42):
+    n_clusters = int(n_clusters)
+    n_init = int(n_init)
+    max_iter = int(max_iter)
+    tol = float(tol)
+    random_state = int(random_state)
     kmeans = KMeans(n_clusters=n_clusters, init=init, n_init=n_init, max_iter=max_iter, tol=tol, random_state=random_state)
     labels = kmeans.fit_predict(dataset)
     return labels
 
 
-def agglomerative_clustering(dataset, n_clusters=3, affinity='euclidean', linkage='ward'):
+def agglomerative_clustering(dataset, n_clusters=3, affinity="euclidean", linkage="ward"):
+    n_clusters = int(n_clusters)
     agglomerative = AgglomerativeClustering(n_clusters=n_clusters, affinity=affinity, linkage=linkage)
     labels = agglomerative.fit_predict(dataset)
     return labels
 
 
-def dbscan_clustering(dataset, eps=0.5, min_samples=5, metric='euclidean'):
+def dbscan_clustering(dataset, eps=0.5, min_samples=5, metric="euclidean"):
+    eps = float(eps)
+    min_samples = int(min_samples)
     dbscan = DBSCAN(eps=eps, min_samples=min_samples, metric=metric)
     labels = dbscan.fit_predict(dataset)
     return labels
 
 
 def mean_shift_clustering(dataset, bandwidth=0.5, seeds=None, bin_seeding=False, cluster_all=True, min_bin_freq=1, max_iter=300):
+    bandwidth = float(bandwidth)
+    min_bin_freq = int(min_bin_freq)
+    max_iter = int(max_iter)
+    if bin_seeding == "True":
+        bin_seeding = True
+    else:
+        bin_seeding = False
+    if cluster_all == "True":
+        cluster_all = True
+    elif cluster_all == "False":
+        cluster_all = False
+    else:
+        cluster_all = int(cluster_all)
+    if seeds == "None":
+        seeds = None
+    else:
+        seeds = np.array[seeds]
     mean_shift = MeanShift(bandwidth=bandwidth, seeds=seeds, bin_seeding=bin_seeding, cluster_all=cluster_all, min_bin_freq=min_bin_freq, max_iter=max_iter)
     labels = mean_shift.fit_predict(dataset)
     return labels
 
 
-def gaussian_mixture_clustering(dataset, n_components=3, covariance_type='full', tol=1e-3, max_iter=100, n_init=1, init_params='kmeans', random_state=42):
+def gaussian_mixture_clustering(dataset, n_components=3, covariance_type="full", tol=1e-3, max_iter=100, n_init=1, init_params="kmeans", random_state=42):
+    n_components = int(n_components)
+    tol = float(tol)
+    max_iter = int(max_iter)
+    n_init = int(n_init)
+    random_state = int(random_state)
     gmm = GaussianMixture(n_components=n_components, covariance_type=covariance_type, tol=tol, max_iter=max_iter, n_init=n_init, init_params=init_params, random_state=random_state)
     labels = gmm.fit_predict(dataset)
     return labels
 
 
 def birch_clustering(dataset, threshold=0.5, branching_factor=50, n_clusters=3, compute_labels=True):
+    threshold = float(threshold)
+    branching_factor = int(branching_factor)
+    n_clusters = int(n_clusters)
+    if compute_labels == "True":
+        compute_labels = True
+    else:
+        compute_labels = False
     birch = Birch(threshold=threshold, branching_factor=branching_factor, n_clusters=n_clusters, compute_labels=compute_labels)
     labels = birch.fit_predict(dataset)
     return labels
 
 
-def affinity_propagation_clustering(dataset, damping=0.5, max_iter=200, convergence_iter=15, preference=None, affinity='euclidean'):
+def affinity_propagation_clustering(dataset, damping=0.5, max_iter=200, convergence_iter=15, preference=None, affinity="euclidean"):
+    damping = float(damping)
+    max_iter = int(max_iter)
+    convergence_iter = int(convergence_iter)
+    if preference == "None":
+        preference = None
+    else:
+        preference = float(preference)
     affinity_propagation = AffinityPropagation(damping=damping, max_iter=max_iter, convergence_iter=convergence_iter, preference=preference, affinity=affinity)
     labels = affinity_propagation.fit_predict(dataset)
     return labels
 
 
-def spectral_clustering(dataset, n_clusters=3, eigen_solver=None, random_state=None, n_init=10, gamma=1.0, n_neighbors=10, eigen_tol=0.0, assign_labels='kmeans'):
+def spectral_clustering(dataset, n_clusters=3, eigen_solver=None, random_state=None, n_init=10, gamma=1.0, n_neighbors=10, eigen_tol=0.0, assign_labels="kmeans"):
+    n_clusters = int(n_clusters)
+    n_init = int(n_init)
+    n_neighbors = int(n_neighbors)
+    gamma = float(gamma)
+    if eigen_solver == "None":
+        eigen_solver = None
+    if eigen_tol != "auto":
+        eigen_tol = float(eigen_tol)
+    if random_state == "None":
+        random_state = None
+    else:
+        random_state = int(random_state)
     spectral_clustering = SpectralClustering(n_clusters=n_clusters, eigen_solver=eigen_solver, random_state=random_state, n_init=n_init, gamma=gamma, n_neighbors=n_neighbors, eigen_tol=eigen_tol, assign_labels=assign_labels)
     labels = spectral_clustering.fit_predict(dataset)
     return labels
 
 
-def optics_clustering(dataset, min_samples=5, max_eps=np.inf, metric='minkowski', p=2, cluster_method='xi', eps=None, xi=0.05, predecessor_correction=True, min_cluster_size=None):
+def optics_clustering(dataset, min_samples=5, max_eps=np.inf, metric="minkowski", p=2, cluster_method="xi", eps=None, xi=0.05, predecessor_correction=True, min_cluster_size=None):
+    min_samples = int(min_samples)
+    p = int(p)
+    xi = float(xi)
+    if eps != "None":
+        eps = float(eps)
+    else:
+        eps = None
+    if predecessor_correction == "True":
+        predecessor_correction = True
+    else:
+        predecessor_correction = False
+    if min_cluster_size != "None":
+        min_cluster_size = int(min_cluster_size)
+    else:
+        min_cluster_size = None
+    if max_eps == "inf":
+        max_eps = np.inf
+    else:
+        max_eps = int(max_eps)
     optics = OPTICS(min_samples=min_samples, max_eps=max_eps, metric=metric, p=p, cluster_method=cluster_method, eps=eps, xi=xi, predecessor_correction=predecessor_correction, min_cluster_size=min_cluster_size)
     labels = optics.fit_predict(dataset)
-    return labels
-
-
-def hdbscan_clustering(dataset, min_cluster_size=5, min_samples=5, alpha=1.0, cluster_selection_epsilon=0.0, metric='euclidean', p=None, leaf_size=40, algorithm='best', core_dist_n_jobs=4, allow_single_cluster=False, gen_min_span_tree=False, approx_min_span_tree=True, gen_unexp_graph=False, match_reference_implementation=False, prune_threshold=None, mtree_build_params=None, mtree_leaf_array=None, compact=False, prediction_data=False, cluster_selection_method='eom', cluster_selection_criteria='leaf'):
-    hdbscan_clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples, alpha=alpha, cluster_selection_epsilon=cluster_selection_epsilon, metric=metric, p=p, leaf_size=leaf_size, algorithm=algorithm, core_dist_n_jobs=core_dist_n_jobs, allow_single_cluster=allow_single_cluster, gen_min_span_tree=gen_min_span_tree, approx_min_span_tree=approx_min_span_tree, gen_unexp_graph=gen_unexp_graph, match_reference_implementation=match_reference_implementation, prune_threshold=prune_threshold, mtree_build_params=mtree_build_params, mtree_leaf_array=mtree_leaf_array, compact=compact, prediction_data=prediction_data, cluster_selection_method=cluster_selection_method, cluster_selection_criteria=cluster_selection_criteria)
-    labels = hdbscan_clusterer.fit_predict(dataset)
     return labels
 
 
