@@ -1,372 +1,275 @@
-import customtkinter
-import os
-from PIL import Image
-import tkinter.filedialog as filedialog
-import tkinter as tk
-import core
-from io import StringIO
-import sys
-class App(customtkinter.CTk):
-    def __init__(self):
-        super().__init__()
-        customtkinter.set_appearance_mode("dark")
-        self.title("Clustering tool.py")
-        self.geometry("700x450")
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
+import pandas as pd
+import warnings
+from sklearn.impute import KNNImputer
+from sklearn.ensemble import IsolationForest
+import numpy as np
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.mixture import GaussianMixture
+from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN, MeanShift, Birch, AffinityPropagation, SpectralClustering, OPTICS
+import hdbscan
 
-        self.dataset = None
-        self.current_frame = 1
+# settings for easier console display
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=DeprecationWarning)
 
-        #Image paths
-        image_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),"test_images")
-        self.logo = customtkinter.CTkImage(Image.open(os.path.join(image_path, "cluster.png")),size=(26, 26))
-        self.folder = customtkinter.CTkImage(Image.open(os.path.join(image_path, "folder.png")), size=(26, 26))
-        self.downloadicon = customtkinter.CTkImage(Image.open(os.path.join(image_path, "download.png")), size=(26, 26))
-        #navigation frame
-        self.navigation_frame = customtkinter.CTkFrame(self, corner_radius=0)
-        self.navigation_frame.grid(row=0, column=0, sticky="nsew")
-        self.navigation_frame.grid_rowconfigure(5, weight=1)
 
-        self.navigation_frame_label = customtkinter.CTkLabel(self.navigation_frame,
-                                                             text="Clustering tool",
-                                                             image=self.logo,
-                                                             compound="left",
-                                                             font=customtkinter.CTkFont(size=15, weight="bold"))
-        self.navigation_frame_label.grid(row=0, column=0, padx=20, pady=20)
+pd.set_option('display.width', 320)
+pd.set_option('display.max_columns', None)
 
-        self.dataset_button = customtkinter.CTkButton(self.navigation_frame,
-                                                   corner_radius=0, height=40,
-                                                   border_spacing=10,
-                                                   text="Dataset",
-                                                   fg_color="transparent",
-                                                   text_color=("gray10", "gray90"),
-                                                   hover_color=("gray70", "gray30"),
-                                                   font=customtkinter.CTkFont(size=20),
-                                                   command=self.dataset_button_event)
-        self.dataset_button.grid(row=1, column=0, sticky="ew")
 
-        self.processing_button = customtkinter.CTkButton(self.navigation_frame,
-                                                      corner_radius=0,
-                                                      height=40,
-                                                      border_spacing=10,
-                                                      text="Pre-proccesing",
-                                                      fg_color="transparent",
-                                                      text_color=("gray10", "gray90"),
-                                                      hover_color=("gray70", "gray30"),
-                                                      font=customtkinter.CTkFont(size=20),
-                                                      command=self.processing_button_event)
-        self.processing_button.grid(row=2, column=0, sticky="ew")
+def read_file(path):
+    dataset = pd.read_csv(path)
+    columns, lines = read_column_line(dataset)
+    print(columns)
+    if "Unnamed: 0.1" in columns:
+        dataset = pd.read_csv(path).drop(columns=["Unnamed: 0.1"])
+    if "Unnamed: 0" in columns:
+        dataset = pd.read_csv(path).drop(columns=["Unnamed: 0"])
+    print(columns)
+    print(dataset)
+    return dataset, columns, lines
 
-        self.anomaly_button = customtkinter.CTkButton(self.navigation_frame,
-                                                      corner_radius=0,
-                                                      height=40,
-                                                      border_spacing=10,
-                                                      text="Anomaly removal",
-                                                      fg_color="transparent",
-                                                      text_color=("gray10", "gray90"),
-                                                      hover_color=("gray70", "gray30"),
-                                                      font=customtkinter.CTkFont(size=20),
-                                                      command=self.anomaly_button_event)
-        self.anomaly_button.grid(row=3, column=0, sticky="ew")
 
-        self.model_button = customtkinter.CTkButton(self.navigation_frame,
-                                                      corner_radius=0,
-                                                      height=40,
-                                                      border_spacing=10,
-                                                      text="Model",
-                                                      fg_color="transparent",
-                                                      text_color=(
-                                                      "gray10", "gray90"),
-                                                      hover_color=(
-                                                      "gray70", "gray30"),
-                                                      font=customtkinter.CTkFont(size=20),
-                                                      command=self.model_button_event)
-        self.model_button.grid(row=4, column=0, sticky="ew")
+def save_dataset(dataset, path):
+    dataset = dataset.reset_index(drop=True, inplace=False)
+    dataset.to_csv(path)
 
-        self.appearance_mode_menu = customtkinter.CTkOptionMenu(
-            self.navigation_frame, values=["Dark", "Light"],
-            command=self.change_appearance_mode_event)
-        self.appearance_mode_menu.grid(row=5, column=0, padx=20, pady=20, sticky="s")
 
-        #frame 1
-        self.dataset_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
-        self.dataset_frame.grid_rowconfigure(3, weight=2)
-        self.dataset_frame.grid_columnconfigure(3, weight=2)
-        self.dataset_frame_lower = customtkinter.CTkFrame(self.dataset_frame, corner_radius=0,fg_color="transparent")
-        self.dataset_frame_lower.grid(row=4, column=0)
-        self.dataset_frame.grid_rowconfigure(1, weight=3)
-        self.dataset_frame.grid_columnconfigure(3, weight=3)
-        self.dataset_entry = customtkinter.CTkEntry(self.dataset_frame_lower, placeholder_text="path to Dataset", width=350, height=35, font=customtkinter.CTkFont(size=15))
-        self.dataset_entry.grid(row=0, column=0, pady=20, padx=10, sticky="w")
-        self.dataset_button = customtkinter.CTkButton(self.dataset_frame_lower, image=self.folder , command=self.openfile, text="", width=10, height=20, border_color="gray40", border_width=2)
-        self.dataset_button.grid(row=0, column=1, pady=20, padx=0, sticky="w")
-        self.save_button2 = customtkinter.CTkButton(self.dataset_frame_lower, image=self.downloadicon, command=self.save_file, text="", width=10, height=20)
-        self.save_button2.grid(row=0, column=2, pady=20, padx=10, sticky="w")
-        self.dataset_frame_middle = customtkinter.CTkFrame(self.dataset_frame, corner_radius=0,fg_color="transparent")
-        self.dataset_frame_middle.grid(row=1, column=0)
-        self.dataset_frame_middle.grid_rowconfigure(3, weight=3)
-        self.dataset_frame_middle.grid_columnconfigure(3, weight=3)
-        self.row_from = customtkinter.CTkEntry(self.dataset_frame_middle, placeholder_text="0000", font=customtkinter.CTkFont(size=15))
-        self.row_from.grid(row=0, column=0, padx=10, pady=5)
-        self.row_to = customtkinter.CTkEntry(self.dataset_frame_middle, placeholder_text="0000", font=customtkinter.CTkFont(size=15))
-        self.row_to.grid(row=0, column=1, padx=10, pady=5)
-        self.row_button = customtkinter.CTkButton(self.dataset_frame_middle, text="Cut rows", font=customtkinter.CTkFont(size=15), command=self.cut_rows)
-        self.row_button.grid(row=0, column=2, padx=10, pady=5)
-        self.col_from = customtkinter.CTkEntry(self.dataset_frame_middle, placeholder_text="Column name", font=customtkinter.CTkFont(size=15))
-        self.col_from.grid(row=1, column=0, padx=10, pady=5)
-        self.col_button = customtkinter.CTkButton(self.dataset_frame_middle, text="Drop columns", font=customtkinter.CTkFont(size=15), command=self.cut_columns)
-        self.col_button.grid(row=1, column=2, padx=10, pady=5)
-        self.sort_button = customtkinter.CTkButton(self.dataset_frame_middle, text="Sort by", font=customtkinter.CTkFont(size=15), command=self.sort_by)
-        self.sort_button.grid(row=1, column=1, padx=10, pady=5)
-        self.dataset_preview = customtkinter.CTkTextbox(self.dataset_frame, width=430, wrap="none")
-        self.dataset_preview.grid(row=0, column=0, pady=20, padx=50)
+def read_column_line(dataset):
+    columns = list(dataset.columns)
+    lines = len(dataset)
+    return columns, lines
 
-        #frame 2
-        self.processing_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
-        self.processing_frame.grid_rowconfigure(3, weight=2)
-        self.processing_frame.grid_columnconfigure(3, weight=2)
-        self.dataset_preview2 = customtkinter.CTkTextbox(self.processing_frame, width=430, wrap="none")
-        self.dataset_preview2.grid(row=0, column=0, pady=20, padx=50)
-        self.processing_frame_middle = customtkinter.CTkFrame(self.processing_frame, corner_radius=0,fg_color="transparent")
-        self.processing_frame_middle.grid(row=1, column=0)
-        self.processing_frame_middle.grid_rowconfigure(3, weight=3)
-        self.processing_frame_middle.grid_columnconfigure(3, weight=3)
-        self.strategy_entry = customtkinter.CTkEntry(self.processing_frame_middle, placeholder_text="KNN/Simple", font=customtkinter.CTkFont(size=13))
-        self.strategy_entry.grid(row=0, column=0, padx=10, pady=5)
-        self.impute_button = customtkinter.CTkButton(self.processing_frame_middle, text="Impute NaNs", font=customtkinter.CTkFont(size=15), command=self.impute)
-        self.impute_button.grid(row=0, column=1, padx=10, pady=5)
-        self.unique_entry = customtkinter.CTkEntry(self.processing_frame_middle, placeholder_text="Unique value", font=customtkinter.CTkFont(size=13))
-        self.unique_entry.grid(row=1, column=0, padx=10, pady=5)
-        self.duplicate_button = customtkinter.CTkButton(self.processing_frame_middle, text="Remove duplicates", font=customtkinter.CTkFont(size=15), command=self.remove_duplicates)
-        self.duplicate_button.grid(row=1, column=1, padx=10, pady=5)
-        self.scale_button = customtkinter.CTkButton(self.processing_frame_middle, text="Scale", font=customtkinter.CTkFont(size=15), command=self.scale)
-        self.scale_button.grid(row=3, column=1, padx=10, pady=5)
-        self.dimension_entry = customtkinter.CTkEntry(self.processing_frame_middle, placeholder_text="0", font=customtkinter.CTkFont(size=13))
-        self.dimension_entry.grid(row=2, column=0, padx=10, pady=5)
-        self.pca_button = customtkinter.CTkButton(self.processing_frame_middle, text="PCA reduction", font=customtkinter.CTkFont(size=15), command=self.PCA)
-        self.pca_button.grid(row=2, column=1, padx=10, pady=5)
 
-        #frame 3
-        self.anomaly_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
-        self.anomaly_frame.grid_rowconfigure(3, weight=2)
-        self.anomaly_frame.grid_columnconfigure(3, weight=2)
-        self.dataset_preview3 = customtkinter.CTkTextbox(self.anomaly_frame, width=430, wrap="none")
-        self.dataset_preview3.grid(row=0, column=0, pady=20, padx=50)
-        self.anomaly_frame_middle = customtkinter.CTkFrame(self.anomaly_frame, corner_radius=0, fg_color="transparent")
-        self.anomaly_frame_middle.grid(row=1, column=0)
-        self.anomaly_frame_middle.grid_rowconfigure(3, weight=3)
-        self.anomaly_frame_middle.grid_columnconfigure(3, weight=3)
-        self.global_percentage_entry = customtkinter.CTkEntry(self.anomaly_frame_middle, placeholder_text="0.3", font=customtkinter.CTkFont(size=15))
-        self.global_percentage_entry.grid(row=0, column=0, padx=10, pady=5)
-        self.global_percentage_button = customtkinter.CTkButton(self.anomaly_frame_middle, text="  Same contamination   ", font=customtkinter.CTkFont(size=15), command=self.impute)
-        self.global_percentage_button.grid(row=0, column=1, padx=10, pady=5)
+def print_dataset(dataset):
+    print(dataset)
 
-        self.dimension_entry = customtkinter.CTkEntry(self.anomaly_frame_middle, placeholder_text="0.3;0.4;0.5;0.26...", font=customtkinter.CTkFont(size=15))
-        self.dimension_entry.grid(row=1, column=0, padx=10, pady=5)
-        self.pca_button = customtkinter.CTkButton(self.anomaly_frame_middle, text="Different contamination", font=customtkinter.CTkFont(size=15), command=self.PCA)
-        self.pca_button.grid(row=1, column=1, padx=10, pady=5)
 
-        self.model_frame = customtkinter.CTkFrame(self, corner_radius=0,
-                                                 fg_color="transparent")
+def drop_column(dataset, to_drop):
+    columns, lines = read_column_line(dataset)
+    if to_drop in columns:
+        dataset = dataset.drop(columns=[to_drop])
+        dataset = dataset.reset_index(drop=True)
+    columns, lines = read_column_line(dataset)
+    return dataset, columns, lines
 
-        self.frame_change("dataset")
-        #!!!!!!!!!! nefungují commandy k anomaliim, jen graficky, bude tma stejny ignore jako u scaling a pca na ID
 
-    def frame_change(self, name):
-        self.dataset_button.configure(fg_color=("gray75", "gray25") if name == "dataset" else "transparent")
-        self.processing_button.configure(fg_color=("gray75", "gray25") if name == "processing" else "transparent")
-        self.anomaly_button.configure(fg_color=("gray75", "gray25") if name == "anomaly" else "transparent")
-        self.model_button.configure(fg_color=("gray75", "gray25") if name == "model" else "transparent")
-        if name == "dataset":
-            self.dataset_frame.grid(row=0, column=1, sticky="nsew")
-            if self.dataset:
-                buffer = StringIO()
-                sys.stdout = buffer
-                print(self.dataset[0])
-                sys.stdout = sys.__stdout__
-                df_string = buffer.getvalue()
-                self.dataset_preview.delete("0.0", "end")
-                self.dataset_preview.insert("0.0", df_string)
+def drop_lines(dataset, lower, upper):
+    columns, lines = read_column_line(dataset)
+    try:
+        lower = int(lower)
+        upper = int(upper)
+    except:
+        pass
+    if type(lower) is int and type(upper) is int:
+        if lower < 0:
+            lower = 0
+        if lower > lines:
+            lower = lines - 1
+        if upper < 0:
+            upper = 0
+        if upper > lines:
+            upper = lines - 1
+        dataset = dataset.drop(index=range(lower, upper + 1))
+        dataset = dataset.reset_index(drop=True)
+    columns, lines = read_column_line(dataset)
+    return dataset, columns, lines
+
+
+def sort_dataset(dataset, sort_by):
+    dataset = dataset.sort_values(by=sort_by)
+    dataset = dataset.reset_index(drop=True)
+    columns, lines = read_column_line(dataset)
+    return dataset, columns, lines
+
+
+def drop_duplicates(dataset, unique_value):
+    columns, lines = read_column_line(dataset)
+    if unique_value not in columns:
+        unique_value = "ID"
+    dataset = dataset.drop_duplicates(subset=unique_value, keep='first')
+    columns, lines = read_column_line(dataset)
+    return dataset, columns, lines
+
+
+def inpute_nan(dataset, strategy):
+    try:
+        if strategy == "KNN" or strategy == "knn":
+            neigh = 6
+            if len(dataset) < 10:
+                neigh = 3
+            imputer_knn = KNNImputer(n_neighbors=neigh)
+            dataset = pd.DataFrame(imputer_knn.fit_transform(dataset), columns=dataset.columns)
+            columns, lines = read_column_line(dataset)
+            return dataset, columns, lines
         else:
-            self.dataset_frame.grid_forget()
-        if name == "processing":
-            self.processing_frame.grid(row=0, column=1, sticky="nsew")
-            if self.dataset:
-                buffer = StringIO()
-                sys.stdout = buffer
-                print(self.dataset[0])
-                sys.stdout = sys.__stdout__
-                df_string = buffer.getvalue()
-                self.dataset_preview2.delete("0.0", "end")
-                self.dataset_preview2.insert("0.0", df_string)
+            imputer_simple = SimpleImputer(strategy='mean')
+            dataset = pd.DataFrame(imputer_simple.fit_transform(dataset), columns=dataset.columns)
+            columns, lines = read_column_line(dataset)
+            return dataset, columns, lines
+    except:
+        return [0, 0, 0, 0]
+
+
+def remove_anomalies(dataset, percentage):
+    columns, lines = read_column_line(dataset)
+    columns_to_change = [col for col in columns if col != 'ID']
+    dataset_reduced = dataset[columns_to_change].copy()
+    percentage_dict = {}
+    for column in columns_to_change:
+        key = column
+        if len(percentage) == 1:
+            value = float(percentage[0])
         else:
-            self.processing_frame.grid_forget()
-        if name == "anomaly":
-            self.anomaly_frame.grid(row=0, column=1, sticky="nsew")
-            if self.dataset:
-                buffer = StringIO()
-                sys.stdout = buffer
-                print(self.dataset[0])
-                sys.stdout = sys.__stdout__
-                df_string = buffer.getvalue()
-                self.dataset_preview3.delete("0.0", "end")
-                self.dataset_preview3.insert("0.0", df_string)
-        else:
-            self.anomaly_frame.grid_forget()
-        if name == "model":
-            self.model_frame.grid(row=0, column=1, sticky="nsew")
-        else:
-            self.model_frame.grid_forget()
+            value = float(percentage.pop(0))
+        percentage_dict[key] = value
+
+    for key, value in percentage_dict.items():
+        column = dataset_reduced[[key]].copy()
+        isolation_forest = IsolationForest(contamination=value, random_state=69)
+        isolation_forest.fit(column)
+        anomaly_selected = isolation_forest.predict(column) == -1
+        dataset_reduced[key][anomaly_selected] = np.nan
+    dataset = pd.concat([dataset['ID'], dataset_reduced], axis=1)
+    imputer_simple = SimpleImputer(strategy='mean')
+    dataset = pd.DataFrame(imputer_simple.fit_transform(dataset), columns=dataset.columns)
+    columns, lines = read_column_line(dataset)
+    return dataset, columns, lines
 
 
-    def dataset_button_event(self):
-        self.frame_change("dataset")
-
-    def processing_button_event(self):
-        self.frame_change("processing")
-
-    def anomaly_button_event(self):
-        self.frame_change("anomaly")
-
-    def model_button_event(self):
-        self.frame_change("moedel")
-
-    def change_appearance_mode_event(self, new_appearance_mode):
-        customtkinter.set_appearance_mode(new_appearance_mode)
-
-    def openfile(self):
-        filepath = filedialog.askopenfilename()
-        if filepath:
-            self.dataset_entry.delete(0, 'end')  # Clear any existing text
-            self.dataset_entry.insert(0, filepath)  # Insert the selected file path
-            self.dataset = core.read_file(filepath)
-            buffer = StringIO()
-            sys.stdout = buffer
-            print(self.dataset)
-            sys.stdout = sys.__stdout__
-            df_string = buffer.getvalue()
-            self.dataset_preview.delete("0.0", "end")
-            self.dataset_preview.insert("0.0", df_string)
-
-    def save_file(self):
-        filepath = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
-        if filepath:
-            core.save_dataset(self.dataset[0], filepath)
-
-    def cut_rows(self):
-        row_from = self.row_from.get()
-        row_to = self.row_to.get()
-        self.dataset = core.drop_lines(self.dataset[0], row_from, row_to)
-        self.row_to.delete(0, "end")
-        self.row_to.insert(0, "0")
-        self.row_from.delete(0, "end")
-        self.row_from.insert(0, "0")
-        buffer = StringIO()
-        sys.stdout = buffer
-        print(self.dataset[0])
-        sys.stdout = sys.__stdout__
-        df_string = buffer.getvalue()
-        self.dataset_preview.delete("0.0", "end")
-        self.dataset_preview.insert("0.0", df_string)
-
-    def cut_columns(self):
-        col_from = self.col_from.get()
-        self.dataset = core.drop_column(self.dataset[0], col_from )
-        self.col_from.delete(0, "end")
-        buffer = StringIO()
-        sys.stdout = buffer
-        print(self.dataset[0])
-        sys.stdout = sys.__stdout__
-        df_string = buffer.getvalue()
-        self.dataset_preview.delete("0.0", "end")
-        self.dataset_preview.insert("0.0", df_string)
-
-    def sort_by(self):
-        sort_column = self.col_from.get()
-        self.col_from.delete(0, "end")
-        self.dataset = core.sort_dataset(self.dataset[0], sort_column)
-        buffer = StringIO()
-        sys.stdout = buffer
-        print(self.dataset[0])
-        sys.stdout = sys.__stdout__
-        df_string = buffer.getvalue()
-        self.dataset_preview.delete("0.0", "end")
-        self.dataset_preview.insert("0.0", df_string)
-
-    def remove_duplicates(self):
-        value = self.unique_entry.get()
-        self.unique_entry.delete(0, "end")
-        self.dataset = core.drop_duplicates(self.dataset[0], value)
-        buffer = StringIO()
-        sys.stdout = buffer
-        print(self.dataset[0])
-        sys.stdout = sys.__stdout__
-        df_string = buffer.getvalue()
-        self.dataset_preview2.delete("0.0", "end")
-        self.dataset_preview2.insert("0.0", df_string)
-
-    def impute(self):
-        strategy = self.strategy_entry.get()
-        self.strategy_entry.delete(0, "end")
-
-        answer = core.inpute_nan(self.dataset[0], strategy)
-        if len(answer) == 4:
-            self.dataset_preview2.insert("0.0", "REMOVE STRINGS FIRST\n")
-            self.strategy_entry.delete(0, "end")
-            self.strategy_entry.insert(0, "Remove strings first")
-        else:
-            self.dataset = answer
-            buffer = StringIO()
-            sys.stdout = buffer
-            if self.dataset is not tuple:
-                print(self.dataset)
-            else:
-                print(self.dataset[0])
-            sys.stdout = sys.__stdout__
-            df_string = buffer.getvalue()
-            self.dataset_preview2.delete("0.0", "end")
-            self.dataset_preview2.insert("0.0", df_string)
-
-    def scale(self):
-        answer = core.scale_dataset(self.dataset[0])
-        if len(answer) == 4:
-            self.dataset_preview2.insert("0.0", "REMOVE STRINGS FIRST\n")
-        else:
-            self.dataset = answer
-            buffer = StringIO()
-            sys.stdout = buffer
-            print(self.dataset[0])
-            sys.stdout = sys.__stdout__
-            df_string = buffer.getvalue()
-            self.dataset_preview2.delete("0.0", "end")
-            self.dataset_preview2.insert("0.0", df_string)
-
-    def PCA(self):
-        dimensions = self.dimension_entry.get()
-        self.dimension_entry.delete(0, "end")
-        answer = core.pca_reduction(self.dataset[0], dimensions)
-        if len(answer) == 4:
-            self.dataset_preview2.insert("0.0", "REMOVE STRINGS AND NaNs FIRST\n")
-        else:
-            self.dataset = answer
-            buffer = StringIO()
-            sys.stdout = buffer
-            print(self.dataset[0])
-            sys.stdout = sys.__stdout__
-            df_string = buffer.getvalue()
-            self.dataset_preview2.delete("0.0", "end")
-            self.dataset_preview2.insert("0.0", df_string)
+def pca_reduction(dataset, dimensions):
+    if dimensions == "":
+        dimensions = 5
+    try:
+        dimensions = int(dimensions)
+        pca = PCA(n_components=dimensions)
+        columns_to_reduce = [col for col in dataset.columns if col != 'ID']
+        reduced_data = pca.fit_transform(dataset[columns_to_reduce])
+        reduced_dataset = pd.DataFrame(reduced_data, columns=[i for i in range(dimensions)])
+        dataset_with_id = pd.concat([dataset['ID'], reduced_dataset], axis=1)
+        columns, lines = read_column_line(dataset_with_id)
+        return dataset_with_id, columns, lines
+    except:
+        return [0, 0, 0, 0]
 
 
-    #pca funguje, fixnout chybějící datasrt později
+def scale_dataset(dataset):
+    try:
+        scaler = StandardScaler()
+        columns_to_scale = [col for col in dataset.columns if col != 'ID']
+        scaled_data = scaler.fit_transform(dataset[columns_to_scale])
+        scaled_dataset = pd.DataFrame(scaled_data, columns=columns_to_scale)
+        dataset_with_id = pd.concat([dataset['ID'], scaled_dataset], axis=1)
+        columns, lines = read_column_line(dataset_with_id)
+        return dataset_with_id, columns, lines
+    except:
+        return [0, 0, 0, 0]
+
+
+def kmeans_clustering(dataset, n_clusters=3, init='k-means++', n_init=10, max_iter=300, tol=1e-4, random_state=42):
+    kmeans = KMeans(n_clusters=n_clusters, init=init, n_init=n_init, max_iter=max_iter, tol=tol, random_state=random_state)
+    labels = kmeans.fit_predict(dataset)
+    return labels
+
+
+def agglomerative_clustering(dataset, n_clusters=3, affinity='euclidean', linkage='ward'):
+    agglomerative = AgglomerativeClustering(n_clusters=n_clusters, affinity=affinity, linkage=linkage)
+    labels = agglomerative.fit_predict(dataset)
+    return labels
+
+
+def dbscan_clustering(dataset, eps=0.5, min_samples=5, metric='euclidean'):
+    dbscan = DBSCAN(eps=eps, min_samples=min_samples, metric=metric)
+    labels = dbscan.fit_predict(dataset)
+    return labels
+
+
+def mean_shift_clustering(dataset, bandwidth=0.5, seeds=None, bin_seeding=False, cluster_all=True, min_bin_freq=1, max_iter=300):
+    mean_shift = MeanShift(bandwidth=bandwidth, seeds=seeds, bin_seeding=bin_seeding, cluster_all=cluster_all, min_bin_freq=min_bin_freq, max_iter=max_iter)
+    labels = mean_shift.fit_predict(dataset)
+    return labels
+
+
+def gaussian_mixture_clustering(dataset, n_components=3, covariance_type='full', tol=1e-3, max_iter=100, n_init=1, init_params='kmeans', random_state=42):
+    gmm = GaussianMixture(n_components=n_components, covariance_type=covariance_type, tol=tol, max_iter=max_iter, n_init=n_init, init_params=init_params, random_state=random_state)
+    labels = gmm.fit_predict(dataset)
+    return labels
+
+
+def birch_clustering(dataset, threshold=0.5, branching_factor=50, n_clusters=3, compute_labels=True):
+    birch = Birch(threshold=threshold, branching_factor=branching_factor, n_clusters=n_clusters, compute_labels=compute_labels)
+    labels = birch.fit_predict(dataset)
+    return labels
+
+
+def affinity_propagation_clustering(dataset, damping=0.5, max_iter=200, convergence_iter=15, preference=None, affinity='euclidean'):
+    affinity_propagation = AffinityPropagation(damping=damping, max_iter=max_iter, convergence_iter=convergence_iter, preference=preference, affinity=affinity)
+    labels = affinity_propagation.fit_predict(dataset)
+    return labels
+
+
+def spectral_clustering(dataset, n_clusters=3, eigen_solver=None, random_state=None, n_init=10, gamma=1.0, n_neighbors=10, eigen_tol=0.0, assign_labels='kmeans'):
+    spectral_clustering = SpectralClustering(n_clusters=n_clusters, eigen_solver=eigen_solver, random_state=random_state, n_init=n_init, gamma=gamma, n_neighbors=n_neighbors, eigen_tol=eigen_tol, assign_labels=assign_labels)
+    labels = spectral_clustering.fit_predict(dataset)
+    return labels
+
+
+def optics_clustering(dataset, min_samples=5, max_eps=np.inf, metric='minkowski', p=2, cluster_method='xi', eps=None, xi=0.05, predecessor_correction=True, min_cluster_size=None):
+    optics = OPTICS(min_samples=min_samples, max_eps=max_eps, metric=metric, p=p, cluster_method=cluster_method, eps=eps, xi=xi, predecessor_correction=predecessor_correction, min_cluster_size=min_cluster_size)
+    labels = optics.fit_predict(dataset)
+    return labels
+
+
+def hdbscan_clustering(dataset, min_cluster_size=5, min_samples=5, alpha=1.0, cluster_selection_epsilon=0.0, metric='euclidean', p=None, leaf_size=40, algorithm='best', core_dist_n_jobs=4, allow_single_cluster=False, gen_min_span_tree=False, approx_min_span_tree=True, gen_unexp_graph=False, match_reference_implementation=False, prune_threshold=None, mtree_build_params=None, mtree_leaf_array=None, compact=False, prediction_data=False, cluster_selection_method='eom', cluster_selection_criteria='leaf'):
+    hdbscan_clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples, alpha=alpha, cluster_selection_epsilon=cluster_selection_epsilon, metric=metric, p=p, leaf_size=leaf_size, algorithm=algorithm, core_dist_n_jobs=core_dist_n_jobs, allow_single_cluster=allow_single_cluster, gen_min_span_tree=gen_min_span_tree, approx_min_span_tree=approx_min_span_tree, gen_unexp_graph=gen_unexp_graph, match_reference_implementation=match_reference_implementation, prune_threshold=prune_threshold, mtree_build_params=mtree_build_params, mtree_leaf_array=mtree_leaf_array, compact=compact, prediction_data=prediction_data, cluster_selection_method=cluster_selection_method, cluster_selection_criteria=cluster_selection_criteria)
+    labels = hdbscan_clusterer.fit_predict(dataset)
+    return labels
 
 
 
+'''
+output = read_file("champions.csv")
+dataset = output[0]
+column = output[1]
+line = output[2]
+print_dataset(dataset)
+print_dataset(column)
+print_dataset(line)
 
+output = sort_dataset(dataset, column[1])
+dataset = output[0]
+column = output[1]
+line = output[2]
+print_dataset(dataset)
+print_dataset(column)
+print_dataset(line)
 
+output = drop_column(dataset, column[0])
+dataset = output[0]
+output = drop_column(dataset, column[-1])
+dataset = output[0]
+column = output[1]
+line = output[2]
+print_dataset(dataset)
+print_dataset(column)
+print_dataset(line)
 
+output = drop_lines(dataset, 200, 50000)
+dataset = output[0]
+column = output[1]
+line = output[2]
+print_dataset(dataset)
+print_dataset(column)
+print_dataset(line)
 
-if __name__ == "__main__":
-    app = App()
-    app.mainloop()
+output = drop_duplicates(dataset, "ID")
+dataset = output[0]
+column = output[1]
+line = output[2]
+print_dataset(dataset)
+print_dataset(column)
+print_dataset(line)
+save_dataset(dataset, "small_set.csv")
+'''
