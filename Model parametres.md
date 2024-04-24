@@ -94,4 +94,5 @@
       - Options: `"euclidean"`, `"manhattan"`, `"chebyshev"`, `"minkowski"`, `"cityblock"`, `"cosine"`.
     - `p`: Power of the Minkowski metric.
 
-These estimates serve as initial guidelines and may require adjustments based on the dataset characteristics.****
+These estimates serve as initial guidelines and may require adjustments based on the dataset characteristics.
+
